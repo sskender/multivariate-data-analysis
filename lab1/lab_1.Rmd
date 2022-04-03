@@ -1,0 +1,156 @@
+---
+title: "1. laboratorijska vježba"
+subtitle: "Multivarijatna analiza podataka"
+date: "ak. god. 2021/2022"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(readr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+*Verzija: 1.0*
+
+## 1. Uvod i upute za predaju
+
+Cilj ove laboratorijske vježbe je primijeniti osnovne koncepte multivarijatne analize podataka, istražiti podatke te ispitati hipoteze. Preduvjet za rješavanje vježbe je osnovno znanje programskog jezika _R_ i rad s _R Markdown_ dokumentima. Sama vježba je koncipirana kao projekt u kojem istražujete i eksperimentirate koristeći dane podatke - ne postoji nužno samo jedan točan način rješavanja svakog podzadatka.
+
+Rješavanje vježbe svodi se na čitanje uputa u tekstu ovog dokumenta, nadopunjavanje blokova kôda (možete dodavati i dodatne blokove kôda ukoliko je potrebno) i ispisivanje rezultata (u vidu ispisa iz funkcija, tablica i grafova). Vježbu radite samostalno, a svoje rješenje branite na terminima koji su vam dodijeljeni u kalendaru. Pritom morate razumjeti teorijske osnove u okviru onoga što je obrađeno na predavanjima i morate pokazati da razumijete sav kôd koji ste napisali.
+
+Vaše rješenje potrebno je predati u sustav _Moodle_ u obliku dvije datoteke: 
+
+1. Ovaj .Rmd dokument s Vašim rješenjem (naziva IME_PREZIME_JMBAG.rmd),  
+2. PDF ili HTML dokument kao izvještaj generiran iz vašeg .Rmd rješenja (također naziva IME_PREZIME_JMBAG).
+
+Rok za predaju je **3. travnja 2022. u 23:59h**. Podsjećamo da bodovi iz laboratorijskih vježbi ulaze i u bodove na ispitnom roku, te da je za polaganje predmeta potrebno imati barem 50% ukupnih bodova iz laboratorijskih vježbi. **Nadoknade laboratorijskih vježbi neće biti organizirane.** Za sva dodatna pitanja svakako se javite na email adresu predmeta: _map@fer.hr_.
+
+## 2. Podatkovni skup
+
+Podatkovni skup koji će biti razmatran u vježbi sadrži bodove studenata na jednom fakultetskom kolegiju. Svakom studentu upisani su bodovi iz dviju laboratorijskih vježbi (**LAB**), pet zadataka međuispita (**MI**), pet zadataka završnog ispita (**ZI**), pet zadataka ispitnog roka (**IR**) i kojoj grupi predavanja pripadaju (**Grupa**).
+
+Studenti mogu položiti kolegij kontinuiranim putem ili na ispitnom roku. Kontinuirani put sastoji se od bodova s laboratorijskih vježbi, međuispita i završnog ispita. Kronološki, 1. laboratorijska vježba održana je prije međuispita, dok je 2. laboratorijska vježba održana između međuispita i završnog ispita. Ispitni rok održan je nakon završnog ispita. Ako student polaže predmet na ispitnom roku, gledaju se samo bodovi s ispitnog roka. Ukupan broj bodova je 100, a bodovi su raspodijeljeni na sljedeći način:
+
+* Kontinuirana nastava:
+  + **LAB**: 20 bodova (0-10 svaka vježba)
+  + **MI** : 40 bodova (0-8 svaki zadatak)
+  + **ZI** : 40 bodova (0-8 svaki zadatak)
+
+* Ispitni rok:
+  + **IR** : 100 bodova (0-20 svaki zadatak)
+
+Za prolazak kolegija potrebno je skupiti **više** od 50 bodova i izaći na obje laboratorijske vježbe (izlazak na vježbe nužan je uvjet i za polaganje ispitnog roka, iako se bodovi ne prenose). Ako student nije pristupio pripadajućem ispitu/laboratorijskoj vježbi, nije upisan podatak (što nije isto kao i 0 bodova). 
+
+## 3. Priprema podataka i eksploratorna analiza
+
+U ovom dijelu vježbe potrebno je učitati podatke i napraviti osnovnu eksploratornu analizu podataka.
+
+### 3.1 Učitavanje podataka
+
+Učitajte podatkovni skup iz datoteke _studenti.csv_ i pripremite podatke za analizu. Pritom obratite pozornost na sljedeće:
+
+* Provjerite jesu li sve varijable očekivanog tipa,
+* Provjerite jesu li vrijednosti unutar zadanog raspona (s obzirom na gore opisano bodovanje),
+* Provjerite zadovoljavaju li bodovi gore opisane uvjete predmeta,
+* Za nedostajuće podatke ispitajte jesu li opravdani te odaberite i primijenite tehniku upravljanja nedostajućim podatcima. 
+
+Nakon što su podatci pripremljeni, analizirajte i ispišite deksriptivne statistike varijabli.
+
+```{r}
+#  Vaš kôd ovdje 
+df <- read_csv("studenti[1].csv")
+```
+```{r}
+summary(df)
+```
+```{r}
+view(df)
+```
+```{r}
+spec(df)
+```
+
+MI_5, ZI_5 i LAB_1, LAB_2 treba pretvoriti u brojeve.
+
+
+```{r}
+df$MI_5 <- as.double(df$MI_5)
+df$ZI_5 <- as.double(df$ZI_5)
+df$LAB_1 <- as.double(df$LAB_1)
+df$LAB_2 <- as.double(df$LAB_2)
+```
+
+MI_2 i ZI_1 popraviti vrijednosti izvan specificiranih granica.
+
+
+```{r}
+df[df$MI_2 > 8, 'MI_2'] = 8
+df[df$ZI_1 == -3, 'ZI_1'] = 3
+```
+```{r}
+summary(df)
+```
+
+### 3.2 Korelacijska analiza
+
+Razmotrimo studente koji su predmet položili kontinuirano. Izračunajte i vizualizirajte matricu korelacije za njihove bodove na nastavnim aktivnostima. Ponovite isto za studente koji su izašli na ispitni rok. Razmislite o zavisnosti različitih nastavnih aktivnosti koje vidite iz ovih korelacijskih matrica.
+
+```{r}
+#  Vaš kôd ovdje 
+```
+
+Prikažite upareni graf za zadatke s ispitnog roka. Na dijagonalama prikažite empirijsku distribuciju podataka, a na elementima izvan dijagonala prikažite grafove raspršenja za parove varijabli. Razmislite o karakteristikama grafova i razmislite postoje li primjeri koji odskaču od ostalih.
+
+```{r}
+# Vaš kôd ovdje
+```
+
+### 3.3 Statistička udaljenost
+
+Izračunajte procjene vektora očekivanja i matrice kovarijance za zadatke s ispitnog roka, kao i statističke udaljenosti svih primjera u odnosu na procijenjeno očekivanje i kovarijancu. Ispitajte postoje li stršeće vrijednosti koje su statistički značajne. 
+
+```{r}
+# Vaš kôd ovdje
+```
+
+## 4. Analiza podataka 
+
+### 4.1 Vizualizacija i deskriptivna statistika
+
+Analizirajte u podatcima sljedeća istraživačka pitanja, koristeći odgovarajuće vizualizacije i deskriptivne statistike ili druge tehnike (dodatno možete provesti i statistički test - nije obavezno).
+
+* Imaju li grupe utjecaj na ukupne bodove iz kontinuirane nastave (postoje li grupe koje su uspješnije od ostalih)? Vrijedi li isto za bodove na roku?
+
+```{r}
+# Vaš kôd ovdje
+```
+
+* Postoji li povezanost između uspjeha studenata na međuispitu i završnom ispitu (vrijedi li da su uspješniji studenti na MI ujedno uspješniji i na ZI)?
+
+```{r}
+# Vaš kôd ovdje
+```
+
+* Postoji li povezanost između uspjeha studenata na nekim zadatcima na ispitima i pojedinim laboratorijskim vježbama? Razmislite koji su mogući uzroci ovakvih zavisnosti, ako postoje.
+
+```{r}
+# Vaš kôd ovdje
+```
+
+Postavite i analizirajte na ovaj način još barem jedno vlastito istraživačko pitanje.
+
+```{r}
+# Vaš kôd ovdje
+```
+
+### 4.2. Regresijska analiza
+
+Razmotrimo u kakvom su odnosu zadatci ispitnog roka s ostalim aktivnostima iz kontinuirane nastave. Istražite odnos koristeći model multivarijatne linearne regresije. Procijenite model gdje su zavisne varijable bodovi zadataka s ispitnog roka, odaberite konačni skup ulaznih varijabli i provjerite adekvatnost modela.
+
+```{r}
+# Vaš kôd ovdje
+```
