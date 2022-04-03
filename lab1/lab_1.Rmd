@@ -3,9 +3,9 @@ title: "1. laboratorijska vježba"
 subtitle: "Multivarijatna analiza podataka"
 date: "ak. god. 2021/2022"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
-  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -19,6 +19,9 @@ library(plotly)
 library(ggcorrplot)
 library(car)
 library(ggfortify)
+library(ggplot2)
+library(dplyr)
+library(hrbrthemes)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -174,25 +177,115 @@ Analizirajte u podatcima sljedeća istraživačka pitanja, koristeći odgovaraju
 
 ```{r}
 # Vaš kôd ovdje
+
+grupe_bodovi <- df[is.na(df$IR_5), c('Grupa')]
+grupe_bodovi$ukupno <- kont_nastava$MI_1 + kont_nastava$MI_2 + kont_nastava$MI_3 + kont_nastava$MI_4 + kont_nastava$MI_5 + kont_nastava$ZI_1 + kont_nastava$ZI_2 + kont_nastava$ZI_3 + kont_nastava$ZI_4 + kont_nastava$ZI_5 + kont_nastava$LAB_1 + kont_nastava$LAB_2
+
+grupe_bodovi[, c('Grupa')] <- lapply(grupe_bodovi[,  c('Grupa')], as.factor)
+
+grupe_bodovi <- na.omit(grupe_bodovi)
+
+basicStats(grupe_bodovi[grupe_bodovi$Grupa == 1, 'ukupno'])
+basicStats(grupe_bodovi[grupe_bodovi$Grupa == 2, 'ukupno'])
+basicStats(grupe_bodovi[grupe_bodovi$Grupa == 3, 'ukupno'])
+```
+```{r}
+ggplot(aes(x = ukupno), data = grupe_bodovi) +
+  geom_histogram(aes(fill = Grupa), binwidth = 0.05) +
+  scale_x_log10() +
+  ylab("frekvencija") +
+  xlab("ukupno bodova") +
+  labs(fill = "Grupe")
+```
+
+
+```{r}
+grupe_bodovi_rok <- df[!is.na(df$IR_5),c('Grupa') ]
+grupe_bodovi_rok$ukupno <- rok_zadaci$IR_1 + rok_zadaci$IR_2 + rok_zadaci$IR_3 + rok_zadaci$IR_4 + rok_zadaci$IR_5
+
+grupe_bodovi_rok[, c('Grupa')] <- lapply(grupe_bodovi_rok[, c('Grupa')], as.factor)
+
+grupe_bodovi_rok <- na.omit(grupe_bodovi_rok)
+
+basicStats(grupe_bodovi_rok[grupe_bodovi_rok$Grupa == 1, 'ukupno'])
+basicStats(grupe_bodovi_rok[grupe_bodovi_rok$Grupa == 2, 'ukupno'])
+basicStats(grupe_bodovi_rok[grupe_bodovi_rok$Grupa == 3, 'ukupno'])
+```
+```{r}
+ggplot(aes(x = ukupno), data = grupe_bodovi_rok) +
+  geom_histogram(aes(fill = Grupa), binwidth = 0.05) +
+  scale_x_log10() +
+  ylab("frekvencija") +
+  xlab("ukupno bodova") +
+  labs(fill = "Grupe")
 ```
 
 * Postoji li povezanost između uspjeha studenata na međuispitu i završnom ispitu (vrijedi li da su uspješniji studenti na MI ujedno uspješniji i na ZI)?
 
 ```{r}
 # Vaš kôd ovdje
+
+mi_zadaci <- c(df$MI_1 + df$MI_2 + df$MI_3 + df$MI_4 + df$MI_5)
+
+zi_zadaci <- c(df$ZI_1 + df$ZI_2 + df$ZI_3 + df$ZI_4 + df$ZI_5)
+
+mi_zi_sve <- data.frame(mi_zadaci, zi_zadaci)
+basicStats(mi_zi_sve)
+```
+
+```{r}
+hist(mi_zi_sve$mi_zadaci)
+hist(mi_zi_sve$zi_zadaci, col='green', add=TRUE)
 ```
 
 * Postoji li povezanost između uspjeha studenata na nekim zadatcima na ispitima i pojedinim laboratorijskim vježbama? Razmislite koji su mogući uzroci ovakvih zavisnosti, ako postoje.
 
 ```{r}
 # Vaš kôd ovdje
+
+mi_lab_kont = df[, c('LAB_1', 'LAB_2', 'MI_1', 'MI_2','MI_3', 'MI_4', 'MI_5')]
+mi_lab_kont <- na.omit(mi_lab_kont)
+ggcorr(mi_lab_kont, label = T)
+
+
+
+zi_lab_kont = df[, c('LAB_1', 'LAB_2', 'ZI_1', 'ZI_2','ZI_3', 'ZI_4', 'ZI_5')]
+zi_lab_kont <- na.omit(zi_lab_kont)
+ggcorr(zi_lab_kont, label = T)
+
+
+
+rok_sve = df[, c('LAB_1', 'LAB_2', 'IR_1', 'IR_2','IR_3', 'IR_4', 'IR_5')]
+
+rok_sve <- na.omit(rok_sve)
+ggcorr(rok_sve, label = T)
 ```
 
 Postavite i analizirajte na ovaj način još barem jedno vlastito istraživačko pitanje.
 
+
+Kako uspjeh na kontinuiranoj nastavi ovisi o laboratorijskim vjezbama?
+
 ```{r}
 # Vaš kôd ovdje
+
+lab_bodovi <- c(df$LAB_1 + df$LAB_2)
+kontinuirano <-  c(df$MI_1 + df$MI_2 + df$MI_3 + df$MI_4 + df$MI_5 + df$ZI_1 + df$ZI_2 + df$ZI_3 + df$ZI_4 + df$ZI_5)
+
+lab_analiza <- data.frame(lab_bodovi, kontinuirano)
+lab_analiza <- na.omit(lab_analiza)
+basicStats(lab_analiza)
+
+lab_analiza$group = cut(lab_analiza$lab_bodovi, c(0, 12, 20))
+
+ggplot(aes(x = kontinuirano), data = lab_analiza) +
+  geom_histogram(aes(fill = group), binwidth = 0.05) +
+  scale_x_log10() +
+  ylab("frekvencija") +
+  xlab("ukupno bodova") +
+  labs(fill = "Grupe")
 ```
+
 
 ### 4.2. Regresijska analiza
 
@@ -214,6 +307,8 @@ coef(mlm.fit)
 ```{r}
 resid(mlm.fit)
 ```
+
+
 ```{r}
 ## define our own "rstandard" method for "mlm" class
 rstandard.mlm <- function (model) {
@@ -230,6 +325,8 @@ rstandard.mlm <- function (model) {
 ```{r}
 plot(fitted(mlm.fit), resid(mlm.fit), col = as.numeric(col(fitted(mlm.fit))), pch = 19)
 ```
+
+
 ```{r}
 sigma(mlm.fit)
 ```
