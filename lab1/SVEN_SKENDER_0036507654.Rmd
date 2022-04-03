@@ -1,0 +1,345 @@
+---
+title: "1. laboratorijska vježba"
+subtitle: "Multivarijatna analiza podataka"
+date: "ak. god. 2021/2022"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(readr)
+library(fBasics)
+library(ggplot2)
+library(GGally)
+library(gridExtra)
+library(plotly)
+library(ggcorrplot)
+library(car)
+library(ggfortify)
+library(ggplot2)
+library(dplyr)
+library(hrbrthemes)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+*Verzija: 1.0*
+
+## 1. Uvod i upute za predaju
+
+Cilj ove laboratorijske vježbe je primijeniti osnovne koncepte multivarijatne analize podataka, istražiti podatke te ispitati hipoteze. Preduvjet za rješavanje vježbe je osnovno znanje programskog jezika _R_ i rad s _R Markdown_ dokumentima. Sama vježba je koncipirana kao projekt u kojem istražujete i eksperimentirate koristeći dane podatke - ne postoji nužno samo jedan točan način rješavanja svakog podzadatka.
+
+Rješavanje vježbe svodi se na čitanje uputa u tekstu ovog dokumenta, nadopunjavanje blokova kôda (možete dodavati i dodatne blokove kôda ukoliko je potrebno) i ispisivanje rezultata (u vidu ispisa iz funkcija, tablica i grafova). Vježbu radite samostalno, a svoje rješenje branite na terminima koji su vam dodijeljeni u kalendaru. Pritom morate razumjeti teorijske osnove u okviru onoga što je obrađeno na predavanjima i morate pokazati da razumijete sav kôd koji ste napisali.
+
+Vaše rješenje potrebno je predati u sustav _Moodle_ u obliku dvije datoteke: 
+
+1. Ovaj .Rmd dokument s Vašim rješenjem (naziva IME_PREZIME_JMBAG.rmd),  
+2. PDF ili HTML dokument kao izvještaj generiran iz vašeg .Rmd rješenja (također naziva IME_PREZIME_JMBAG).
+
+Rok za predaju je **3. travnja 2022. u 23:59h**. Podsjećamo da bodovi iz laboratorijskih vježbi ulaze i u bodove na ispitnom roku, te da je za polaganje predmeta potrebno imati barem 50% ukupnih bodova iz laboratorijskih vježbi. **Nadoknade laboratorijskih vježbi neće biti organizirane.** Za sva dodatna pitanja svakako se javite na email adresu predmeta: _map@fer.hr_.
+
+## 2. Podatkovni skup
+
+Podatkovni skup koji će biti razmatran u vježbi sadrži bodove studenata na jednom fakultetskom kolegiju. Svakom studentu upisani su bodovi iz dviju laboratorijskih vježbi (**LAB**), pet zadataka međuispita (**MI**), pet zadataka završnog ispita (**ZI**), pet zadataka ispitnog roka (**IR**) i kojoj grupi predavanja pripadaju (**Grupa**).
+
+Studenti mogu položiti kolegij kontinuiranim putem ili na ispitnom roku. Kontinuirani put sastoji se od bodova s laboratorijskih vježbi, međuispita i završnog ispita. Kronološki, 1. laboratorijska vježba održana je prije međuispita, dok je 2. laboratorijska vježba održana između međuispita i završnog ispita. Ispitni rok održan je nakon završnog ispita. Ako student polaže predmet na ispitnom roku, gledaju se samo bodovi s ispitnog roka. Ukupan broj bodova je 100, a bodovi su raspodijeljeni na sljedeći način:
+
+* Kontinuirana nastava:
+  + **LAB**: 20 bodova (0-10 svaka vježba)
+  + **MI** : 40 bodova (0-8 svaki zadatak)
+  + **ZI** : 40 bodova (0-8 svaki zadatak)
+
+* Ispitni rok:
+  + **IR** : 100 bodova (0-20 svaki zadatak)
+
+Za prolazak kolegija potrebno je skupiti **više** od 50 bodova i izaći na obje laboratorijske vježbe (izlazak na vježbe nužan je uvjet i za polaganje ispitnog roka, iako se bodovi ne prenose). Ako student nije pristupio pripadajućem ispitu/laboratorijskoj vježbi, nije upisan podatak (što nije isto kao i 0 bodova). 
+
+## 3. Priprema podataka i eksploratorna analiza
+
+U ovom dijelu vježbe potrebno je učitati podatke i napraviti osnovnu eksploratornu analizu podataka.
+
+### 3.1 Učitavanje podataka
+
+Učitajte podatkovni skup iz datoteke _studenti.csv_ i pripremite podatke za analizu. Pritom obratite pozornost na sljedeće:
+
+* Provjerite jesu li sve varijable očekivanog tipa,
+* Provjerite jesu li vrijednosti unutar zadanog raspona (s obzirom na gore opisano bodovanje),
+* Provjerite zadovoljavaju li bodovi gore opisane uvjete predmeta,
+* Za nedostajuće podatke ispitajte jesu li opravdani te odaberite i primijenite tehniku upravljanja nedostajućim podatcima. 
+
+Nakon što su podatci pripremljeni, analizirajte i ispišite deksriptivne statistike varijabli.
+
+```{r}
+#  Vaš kôd ovdje 
+df <- read_csv("studenti[1].csv")
+```
+```{r}
+summary(df)
+```
+```{r}
+view(df)
+```
+```{r}
+spec(df)
+```
+
+MI_5, ZI_5 i LAB_1, LAB_2 treba pretvoriti u brojeve.
+
+
+```{r}
+df$MI_5 <- as.double(df$MI_5)
+df$ZI_5 <- as.double(df$ZI_5)
+df$LAB_1 <- as.double(df$LAB_1)
+df$LAB_2 <- as.double(df$LAB_2)
+```
+
+MI_2 i ZI_1 popraviti vrijednosti izvan specificiranih granica.
+
+
+```{r}
+df[df$MI_2 > 8, 'MI_2'] = 8
+df[df$ZI_1 < 0, 'ZI_1'] = 0
+
+df <- df %>% filter(!is.na(MI_5))
+df <- df %>% filter(!is.na(ZI_5))
+
+summary(df)
+```
+
+
+### 3.2 Korelacijska analiza
+
+Razmotrimo studente koji su predmet položili kontinuirano. Izračunajte i vizualizirajte matricu korelacije za njihove bodove na nastavnim aktivnostima. Ponovite isto za studente koji su izašli na ispitni rok. Razmislite o zavisnosti različitih nastavnih aktivnosti koje vidite iz ovih korelacijskih matrica.
+
+
+Ako nisu na roku (is.na) onda su prosli kontinuirano.
+
+```{r}
+kont_nastava <- df[is.na(df$IR_1), c('MI_1', 'MI_2','MI_3', 'MI_4', 'MI_5', 'LAB_1', 'ZI_1', 'ZI_2','ZI_3','ZI_4','ZI_5','LAB_2')]
+
+summary(kont_nastava)
+```
+
+Na roku su ako nije NA na nekom od zadataka s roka.
+
+```{r}
+rok <- df[!is.na(df$IR_1), c('MI_1', 'MI_2','MI_3', 'MI_4', 'MI_5', 'LAB_1', 'ZI_1', 'ZI_2','ZI_3','ZI_4','ZI_5','LAB_2')]
+
+summary(rok)
+
+rok <- na.omit(rok)
+summary(rok)
+```
+```{r}
+cor(kont_nastava)
+```
+
+
+```{r}
+cor(rok, use="complete.obs")
+```
+
+Prikažite upareni graf za zadatke s ispitnog roka. Na dijagonalama prikažite empirijsku distribuciju podataka, a na elementima izvan dijagonala prikažite grafove raspršenja za parove varijabli. Razmislite o karakteristikama grafova i razmislite postoje li primjeri koji odskaču od ostalih.
+
+
+
+```{r}
+rok_zadaci = df[, c('IR_1', 'IR_2','IR_3', 'IR_4', 'IR_5')]
+rok_zadaci <- na.omit(rok_zadaci)
+ggpairs(rok_zadaci, diag = list(continuous = "barDiag"))
+```
+
+### 3.3 Statistička udaljenost
+
+Izračunajte procjene vektora očekivanja i matrice kovarijance za zadatke s ispitnog roka, kao i statističke udaljenosti svih primjera u odnosu na procijenjeno očekivanje i kovarijancu. Ispitajte postoje li stršeće vrijednosti koje su statistički značajne. 
+
+```{r}
+# Vaš kôd ovdje
+stat_dist <- mahalanobis(rok_zadaci, colMeans(rok_zadaci), cov(rok_zadaci))
+
+pval <- pchisq(stat_dist, df=dim(rok_zadaci)[2], lower.tail=FALSE)
+rok_zadaci$stat_dist <- stat_dist
+
+ggplot(rok_zadaci, aes(as.numeric(rownames(rok_zadaci)), stat_dist))+geom_point()
+hist(stat_dist)
+ggplot(rok_zadaci, aes(sample = stat_dist)) + stat_qq(distribution = qchisq, dparams = 2) +stat_qq_line(distribution = qchisq, dparams = 2)
+```
+
+## 4. Analiza podataka 
+
+### 4.1 Vizualizacija i deskriptivna statistika
+
+Analizirajte u podatcima sljedeća istraživačka pitanja, koristeći odgovarajuće vizualizacije i deskriptivne statistike ili druge tehnike (dodatno možete provesti i statistički test - nije obavezno).
+
+* Imaju li grupe utjecaj na ukupne bodove iz kontinuirane nastave (postoje li grupe koje su uspješnije od ostalih)? Vrijedi li isto za bodove na roku?
+
+```{r}
+# Vaš kôd ovdje
+
+grupe_bodovi <- df[is.na(df$IR_5), c('Grupa')]
+grupe_bodovi$ukupno <- kont_nastava$MI_1 + kont_nastava$MI_2 + kont_nastava$MI_3 + kont_nastava$MI_4 + kont_nastava$MI_5 + kont_nastava$ZI_1 + kont_nastava$ZI_2 + kont_nastava$ZI_3 + kont_nastava$ZI_4 + kont_nastava$ZI_5 + kont_nastava$LAB_1 + kont_nastava$LAB_2
+
+grupe_bodovi[, c('Grupa')] <- lapply(grupe_bodovi[,  c('Grupa')], as.factor)
+
+grupe_bodovi <- na.omit(grupe_bodovi)
+
+basicStats(grupe_bodovi[grupe_bodovi$Grupa == 1, 'ukupno'])
+basicStats(grupe_bodovi[grupe_bodovi$Grupa == 2, 'ukupno'])
+basicStats(grupe_bodovi[grupe_bodovi$Grupa == 3, 'ukupno'])
+```
+```{r}
+ggplot(aes(x = ukupno), data = grupe_bodovi) +
+  geom_histogram(aes(fill = Grupa), binwidth = 0.05) +
+  scale_x_log10() +
+  ylab("frekvencija") +
+  xlab("ukupno bodova") +
+  labs(fill = "Grupe")
+```
+
+
+```{r}
+grupe_bodovi_rok <- df[!is.na(df$IR_5),c('Grupa') ]
+grupe_bodovi_rok$ukupno <- rok_zadaci$IR_1 + rok_zadaci$IR_2 + rok_zadaci$IR_3 + rok_zadaci$IR_4 + rok_zadaci$IR_5
+
+grupe_bodovi_rok[, c('Grupa')] <- lapply(grupe_bodovi_rok[, c('Grupa')], as.factor)
+
+grupe_bodovi_rok <- na.omit(grupe_bodovi_rok)
+
+basicStats(grupe_bodovi_rok[grupe_bodovi_rok$Grupa == 1, 'ukupno'])
+basicStats(grupe_bodovi_rok[grupe_bodovi_rok$Grupa == 2, 'ukupno'])
+basicStats(grupe_bodovi_rok[grupe_bodovi_rok$Grupa == 3, 'ukupno'])
+```
+```{r}
+ggplot(aes(x = ukupno), data = grupe_bodovi_rok) +
+  geom_histogram(aes(fill = Grupa), binwidth = 0.05) +
+  scale_x_log10() +
+  ylab("frekvencija") +
+  xlab("ukupno bodova") +
+  labs(fill = "Grupe")
+```
+
+* Postoji li povezanost između uspjeha studenata na međuispitu i završnom ispitu (vrijedi li da su uspješniji studenti na MI ujedno uspješniji i na ZI)?
+
+```{r}
+# Vaš kôd ovdje
+
+mi_zadaci <- c(df$MI_1 + df$MI_2 + df$MI_3 + df$MI_4 + df$MI_5)
+
+zi_zadaci <- c(df$ZI_1 + df$ZI_2 + df$ZI_3 + df$ZI_4 + df$ZI_5)
+
+mi_zi_sve <- data.frame(mi_zadaci, zi_zadaci)
+basicStats(mi_zi_sve)
+```
+
+```{r}
+hist(mi_zi_sve$mi_zadaci)
+hist(mi_zi_sve$zi_zadaci, col='green', add=TRUE)
+```
+
+* Postoji li povezanost između uspjeha studenata na nekim zadatcima na ispitima i pojedinim laboratorijskim vježbama? Razmislite koji su mogući uzroci ovakvih zavisnosti, ako postoje.
+
+```{r}
+# Vaš kôd ovdje
+
+mi_lab_kont = df[, c('LAB_1', 'LAB_2', 'MI_1', 'MI_2','MI_3', 'MI_4', 'MI_5')]
+mi_lab_kont <- na.omit(mi_lab_kont)
+ggcorr(mi_lab_kont, label = T)
+
+
+
+zi_lab_kont = df[, c('LAB_1', 'LAB_2', 'ZI_1', 'ZI_2','ZI_3', 'ZI_4', 'ZI_5')]
+zi_lab_kont <- na.omit(zi_lab_kont)
+ggcorr(zi_lab_kont, label = T)
+
+
+
+rok_sve = df[, c('LAB_1', 'LAB_2', 'IR_1', 'IR_2','IR_3', 'IR_4', 'IR_5')]
+
+rok_sve <- na.omit(rok_sve)
+ggcorr(rok_sve, label = T)
+```
+
+Postavite i analizirajte na ovaj način još barem jedno vlastito istraživačko pitanje.
+
+
+Kako uspjeh na kontinuiranoj nastavi ovisi o laboratorijskim vjezbama?
+
+```{r}
+# Vaš kôd ovdje
+
+lab_bodovi <- c(df$LAB_1 + df$LAB_2)
+kontinuirano <-  c(df$MI_1 + df$MI_2 + df$MI_3 + df$MI_4 + df$MI_5 + df$ZI_1 + df$ZI_2 + df$ZI_3 + df$ZI_4 + df$ZI_5)
+
+lab_analiza <- data.frame(lab_bodovi, kontinuirano)
+lab_analiza <- na.omit(lab_analiza)
+basicStats(lab_analiza)
+
+lab_analiza$group = cut(lab_analiza$lab_bodovi, c(0, 12, 20))
+
+ggplot(aes(x = kontinuirano), data = lab_analiza) +
+  geom_histogram(aes(fill = group), binwidth = 0.05) +
+  scale_x_log10() +
+  ylab("frekvencija") +
+  xlab("ukupno bodova") +
+  labs(fill = "Grupe")
+```
+
+
+### 4.2. Regresijska analiza
+
+Razmotrimo u kakvom su odnosu zadatci ispitnog roka s ostalim aktivnostima iz kontinuirane nastave. Istražite odnos koristeći model multivarijatne linearne regresije. Procijenite model gdje su zavisne varijable bodovi zadataka s ispitnog roka, odaberite konačni skup ulaznih varijabli i provjerite adekvatnost modela.
+
+```{r}
+rok_regresija <- na.omit(df)
+rok_regresija <- select(rok_regresija, -Grupa)
+mlm.fit <- lm(cbind(IR_1, IR_2, IR_3, IR_4, IR_5) ~ ., data = rok_regresija)
+summary(mlm.fit)
+```
+
+
+```{r}
+coef(mlm.fit)
+```
+
+
+```{r}
+resid(mlm.fit)
+```
+
+
+```{r}
+## define our own "rstandard" method for "mlm" class
+rstandard.mlm <- function (model) {
+  Q <- with(model, qr.qy(qr, diag(1, nrow = nrow(qr$qr), ncol = qr$rank)))  ## Q matrix
+  hii <- rowSums(Q ^ 2)  ## diagonal of hat matrix QQ'
+  RSS <- colSums(model$residuals ^ 2)  ## residual sums of squares (for each model)
+  sigma <- sqrt(RSS / model$df.residual)  ##  ## Pearson estimate of residuals (for each model)
+  pointwise_sd <- outer(sqrt(1 - hii), sigma)  ## point-wise residual standard error (for each model)
+  model$residuals / pointwise_sd  ## standardised residuals
+}
+```
+
+
+```{r}
+plot(fitted(mlm.fit), resid(mlm.fit), col = as.numeric(col(fitted(mlm.fit))), pch = 19)
+```
+
+
+```{r}
+sigma(mlm.fit)
+```
+
+
+```{r}
+mlm2.fit <- update(mlm.fit, . ~ . - ZI_3 - ZI_4)
+anova(mlm.fit, mlm2.fit)
+Anova(mlm2.fit)
+```
+
+
+```{r}
+lh.out <- linearHypothesis(mlm.fit, hypothesis.matrix = c("ZI_3 = 0", "ZI_4 = 0"))
+lh.out
+```
