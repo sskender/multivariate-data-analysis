@@ -11,6 +11,14 @@ output:
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(readr)
+library(fBasics)
+library(ggplot2)
+library(GGally)
+library(gridExtra)
+library(plotly)
+library(ggcorrplot)
+library(car)
+library(ggfortify)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -89,24 +97,55 @@ MI_2 i ZI_1 popraviti vrijednosti izvan specificiranih granica.
 
 ```{r}
 df[df$MI_2 > 8, 'MI_2'] = 8
-df[df$ZI_1 == -3, 'ZI_1'] = 3
-```
-```{r}
+df[df$ZI_1 < 0, 'ZI_1'] = 0
+
+df <- df %>% filter(!is.na(MI_5))
+df <- df %>% filter(!is.na(ZI_5))
+
 summary(df)
 ```
+
 
 ### 3.2 Korelacijska analiza
 
 Razmotrimo studente koji su predmet položili kontinuirano. Izračunajte i vizualizirajte matricu korelacije za njihove bodove na nastavnim aktivnostima. Ponovite isto za studente koji su izašli na ispitni rok. Razmislite o zavisnosti različitih nastavnih aktivnosti koje vidite iz ovih korelacijskih matrica.
 
+
+Ako nisu na roku (is.na) onda su prosli kontinuirano.
+
 ```{r}
-#  Vaš kôd ovdje 
+kont_nastava <- df[is.na(df$IR_1), c('MI_1', 'MI_2','MI_3', 'MI_4', 'MI_5', 'LAB_1', 'ZI_1', 'ZI_2','ZI_3','ZI_4','ZI_5','LAB_2')]
+
+summary(kont_nastava)
+```
+
+Na roku su ako nije NA na nekom od zadataka s roka.
+
+```{r}
+rok <- df[!is.na(df$IR_1), c('MI_1', 'MI_2','MI_3', 'MI_4', 'MI_5', 'LAB_1', 'ZI_1', 'ZI_2','ZI_3','ZI_4','ZI_5','LAB_2')]
+
+summary(rok)
+
+rok <- na.omit(rok)
+summary(rok)
+```
+```{r}
+cor(kont_nastava)
+```
+
+
+```{r}
+cor(rok, use="complete.obs")
 ```
 
 Prikažite upareni graf za zadatke s ispitnog roka. Na dijagonalama prikažite empirijsku distribuciju podataka, a na elementima izvan dijagonala prikažite grafove raspršenja za parove varijabli. Razmislite o karakteristikama grafova i razmislite postoje li primjeri koji odskaču od ostalih.
 
+
+
 ```{r}
-# Vaš kôd ovdje
+rok_zadaci = df[, c('IR_1', 'IR_2','IR_3', 'IR_4', 'IR_5')]
+rok_zadaci <- na.omit(rok_zadaci)
+ggpairs(rok_zadaci, diag = list(continuous = "barDiag"))
 ```
 
 ### 3.3 Statistička udaljenost
@@ -115,6 +154,14 @@ Izračunajte procjene vektora očekivanja i matrice kovarijance za zadatke s isp
 
 ```{r}
 # Vaš kôd ovdje
+stat_dist <- mahalanobis(rok_zadaci, colMeans(rok_zadaci), cov(rok_zadaci))
+
+pval <- pchisq(stat_dist, df=dim(rok_zadaci)[2], lower.tail=FALSE)
+rok_zadaci$stat_dist <- stat_dist
+
+ggplot(rok_zadaci, aes(as.numeric(rownames(rok_zadaci)), stat_dist))+geom_point()
+hist(stat_dist)
+ggplot(rok_zadaci, aes(sample = stat_dist)) + stat_qq(distribution = qchisq, dparams = 2) +stat_qq_line(distribution = qchisq, dparams = 2)
 ```
 
 ## 4. Analiza podataka 
@@ -152,5 +199,50 @@ Postavite i analizirajte na ovaj način još barem jedno vlastito istraživačko
 Razmotrimo u kakvom su odnosu zadatci ispitnog roka s ostalim aktivnostima iz kontinuirane nastave. Istražite odnos koristeći model multivarijatne linearne regresije. Procijenite model gdje su zavisne varijable bodovi zadataka s ispitnog roka, odaberite konačni skup ulaznih varijabli i provjerite adekvatnost modela.
 
 ```{r}
-# Vaš kôd ovdje
+rok_regresija <- na.omit(df)
+rok_regresija <- select(rok_regresija, -Grupa)
+mlm.fit <- lm(cbind(IR_1, IR_2, IR_3, IR_4, IR_5) ~ ., data = rok_regresija)
+summary(mlm.fit)
+```
+
+
+```{r}
+coef(mlm.fit)
+```
+
+
+```{r}
+resid(mlm.fit)
+```
+```{r}
+## define our own "rstandard" method for "mlm" class
+rstandard.mlm <- function (model) {
+  Q <- with(model, qr.qy(qr, diag(1, nrow = nrow(qr$qr), ncol = qr$rank)))  ## Q matrix
+  hii <- rowSums(Q ^ 2)  ## diagonal of hat matrix QQ'
+  RSS <- colSums(model$residuals ^ 2)  ## residual sums of squares (for each model)
+  sigma <- sqrt(RSS / model$df.residual)  ##  ## Pearson estimate of residuals (for each model)
+  pointwise_sd <- outer(sqrt(1 - hii), sigma)  ## point-wise residual standard error (for each model)
+  model$residuals / pointwise_sd  ## standardised residuals
+}
+```
+
+
+```{r}
+plot(fitted(mlm.fit), resid(mlm.fit), col = as.numeric(col(fitted(mlm.fit))), pch = 19)
+```
+```{r}
+sigma(mlm.fit)
+```
+
+
+```{r}
+mlm2.fit <- update(mlm.fit, . ~ . - ZI_3 - ZI_4)
+anova(mlm.fit, mlm2.fit)
+Anova(mlm2.fit)
+```
+
+
+```{r}
+lh.out <- linearHypothesis(mlm.fit, hypothesis.matrix = c("ZI_3 = 0", "ZI_4 = 0"))
+lh.out
 ```
