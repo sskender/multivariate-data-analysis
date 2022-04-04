@@ -1,0 +1,183 @@
+---
+title: "01_MAP_Auditorne"
+author: "Damir Pintar"
+date: "22/02/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(readr)
+library(fBasics)
+library(ggplot2)
+library(GGally)
+library(gridExtra)
+library(plotly)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Podatkovni skup - "Tabachnik_screen.dat"
+
+- anketni podaci stanovnika San Francisco Valley iz 1975. 
+
+- prikupljeni atributi:
+    - `TIMEDRS` - broj posjeta doktoru
+    - `ATTDRUG` - stav o korištenju opijata
+    - `ATTHOUSE` - stav o kućnim poslovima
+    - `INCOME` - prihod kućanstva
+    - `MSTATUS` - bračni status
+    - `RACE` - rasa
+
+- neki od metapodataka: 91.2% odgovora su bijele rase, medijan prihoda je $17000, 52.9% je zaposleno, skala za stav o opijatima ide od 5 do 10, 
+
+
+```{r, echo = T}
+df <- read_csv("datasets/Tabachnik_screen.csv")
+```
+
+
+
+```{r, echo = T}
+summary(df)
+```
+
+
+
+```{r}
+head(df)
+```
+
+
+```{r}
+tail(df)
+```
+
+```{r, eval = F}
+categoricals <- c("emplmnt", "mstatus", "race")
+df[, categoricals] <- lapply(df[, categoricals], as.factor)
+levels(df$emplmnt) <- c("employed", "unemployed")
+levels(df$mstatus) <- c("single", "married")
+levels(df$race) <- c("white", "other")
+```
+
+
+```{r}
+basicStats(df[, 2:5])
+```
+
+```{r}
+ggpairs(df[, 2:5], diag = list(continuous = "barDiag"))
+```
+
+```{r}
+g1 <- df %>% ggplot(aes(x = timedrs)) + geom_histogram(aes(y = ..density..), bins = 10) + geom_density(col = "blue")
+g2 <- df %>% ggplot(aes(x = attdrug)) + geom_histogram(aes(y = ..density..),bins = 10) + geom_density(col = "blue")
+g3 <- df %>% ggplot(aes(x = atthouse)) + geom_histogram(aes(y = ..density..),bins = 10) + geom_density(col = "blue")
+g4 <- df %>% ggplot(aes(x = income)) + geom_histogram(aes(y = ..density..),bins = 10) + geom_density(col = "blue")
+  
+g1
+grid.arrange(g1, g2, g3, g4, ncol = 2)
+
+```
+
+
+- ATTHOUSE ima dvije sumnjive vrijednosti koja je iznimno mala (prema metapodacima, mala vrijednost znači iznimno visoka razina zadovoljstva kućanskim poslovima)
+
+```{r}
+df %>% filter(atthouse == 2)
+```
+
+```{r}
+(2 - mean(df$atthouse, na.rm = T)) / sd(df$atthouse, na.rm = T)
+```
+
+- brišemo ta dva slučaja
+
+```{r}
+df <- df %>% filter(subno != 346, subno != 407)
+```
+
+- brišem i jedan slučaj sa NA
+
+```{r}
+df <- df %>% filter(!is.na(atthouse))
+
+```
+
+
+```{r}
+summary(df$income)
+```
+
+- upotrijebiti ćemo jednostavno rješenje - zamjena NA sa sredinom
+
+```{r}
+df %>% filter(is.na(income))
+
+```
+
+```{r}
+df[is.na(df$income), "income"] <- mean(df$income, na.rm = T)
+```
+
+```{r}
+df %>% filter(subno %in% c(67, 79, 84, 95))
+```
+
+
+
+```{r}
+ggpairs(df[, 2:5], diag = list(continuous = "barDiag"))
+```
+
+```{r}
+g1 <- df %>% ggplot(aes(x = timedrs)) + geom_histogram(aes(y = ..density..), bins = 10) + geom_density(col = "blue")
+g2 <- df %>% ggplot(aes(x = attdrug)) + geom_histogram(aes(y = ..density..),bins = 10) + geom_density(col = "blue")
+g3 <- df %>% ggplot(aes(x = atthouse)) + geom_histogram(aes(y = ..density..),bins = 10) + geom_density(col = "blue")
+g4 <- df %>% ggplot(aes(x = income)) + geom_histogram(aes(y = ..density..),bins = 10) + geom_density(col = "blue")
+  
+g1
+grid.arrange(g1, g2, g3, g4, ncol = 2)
+
+```
+
+
+
+
+
+
+```{r}
+df$ltimedrs <- log10(df$timedrs + 1)
+df %>% ggplot(aes(x = ltimedrs)) + geom_histogram(aes(y = ..density..), bins = 10) + geom_density(col = "blue")
+
+```
+
+
+```{r}
+
+df3 <- df %>% dplyr::select(-subno, -timedrs)
+df$mahal <- mahalanobis(df3, colMeans(df3), cov(df3))
+df$mahalCutoff <- df$mahal > qchisq(p = 0.999 , df = ncol(df3))
+```
+
+```{r}
+df[order(df$mahal, decreasing = T), ]
+
+```
+
+
+
+```{r}
+g <- ggplot(df, aes(x = subno, y = mahal)) + geom_point()
+g
+```
+
+
+```{r}
+ggplotly(g)
+```
+
+```{r}
+ggcorr(df %>% dplyr::select(-subno, -timedrs, -mahal), label = T)
+```
+

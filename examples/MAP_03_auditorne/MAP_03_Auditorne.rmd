@@ -1,0 +1,122 @@
+---
+title: "MAP_03_Auditorne"
+author: "Azra Tafro"
+date: '23/03/2022 '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(readr)
+library(fBasics)
+library(ggplot2)
+library(GGally)
+library(gridExtra)
+library(plotly)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Primjer 3
+
+```{r}
+df <- read.delim("Podaci/Johnson_snow.dat")
+x1 <- df$x1
+x2 <- df$x2
+```
+
+a) Uzoračka sredina i varijanca:
+
+```{r}
+m1 <- mean(x1)
+m2 <- mean(x2)
+V1 <- var(x1)
+V2 <- var(x2)
+S <- cov(df)
+m <- c(m1, m2)
+```
+
+Sredina i varijanca za linearnu kombinaciju -x1+x2:
+
+```{r}
+c <- c(-1,1) #linearna kombinacija je -x1+x2
+
+t(c)%*%m
+t(c)%*% S %*% c
+```
+
+b) Formiramo razlike direktno:
+
+```{r}
+d <- x2-x1 #ili d <- c%*%t(X)
+
+mean(d)
+var(d)
+```
+
+### Primjer 4
+
+```{r}
+df <- read.csv("Podaci/Johnson_radiation.dat", sep="")
+x=df$Closed
+
+ggplot(df, aes(y=Closed, x = seq(1, length(Closed))))+geom_point()
+shapiro.test (df$Closed)
+```
+
+Q-Q plot usporedbe s normalnom razdiobom na dva načina:
+```{r}
+qqnorm (df$Closed, pch = 1, frame = FALSE)
+qqline (df$Closed, col = "steelblue", lwd = 2)
+
+ggplot(df, aes(sample = Closed))  + stat_qq() + stat_qq_line()+labs(title="Normal QQ Plot")
+```
+
+Računanje statističke udaljenosti:
+
+```{r}
+stat_dist <- mahalanobis(df, colMeans(df), cov(df))
+
+pval <- pchisq(stat_dist, df=dim(df)[2], lower.tail=FALSE)
+df$stat_dist <- stat_dist
+
+ggplot(df, aes(as.numeric(rownames(df)), stat_dist))+geom_point()
+hist(stat_dist)
+```
+
+QQ plot usporedbe s chi^2 razdiobom:
+
+```{r}
+qqplot(qchisq(ppoints(42), df =2), stat_dist, main = expression("Q-Q plot for" ~~ {chi^2}[nu ==2]))
+
+ggplot(df, aes(sample = stat_dist)) + stat_qq(distribution = qchisq, dparams = 2) +stat_qq_line(distribution = qchisq, dparams = 2)+labs(title="Chi-squared QQ Plot")
+```
+
+Transformiranje podataka:
+
+```{r}
+x <- ((df$Closed)^(0.25)-1)/0.25
+qqnorm (x, pch = 1, frame = FALSE)
+qqline (x, col = "steelblue", lwd = 2)
+
+y <- ((df$Open)^(0.3)-1)/0.3
+qqnorm (y, pch = 1, frame = FALSE)
+qqline (y, col = "steelblue", lwd = 2)
+
+df$Closed_transf <- x
+df$Open_transf <- y
+ggplot (df, aes (x = Closed_transf, y = Open_transf)) + geom_point()
+```
+
+Statistička udaljenost transformiranih podataka:
+
+```{r}
+df1 <- data.frame(cbind(x,y))
+
+stat_dist1 <- mahalanobis(df1, colMeans(df1), cov(df1))
+pval1 <- pchisq(stat_dist1, df=2, lower.tail=FALSE)
+df1$stat_dist <- stat_dist1
+
+hist(stat_dist1)
+
+ggplot(df1, aes(sample = stat_dist)) + stat_qq(distribution = qchisq, dparams = 2) +stat_qq_line(distribution = qchisq, dparams = 2)
+```

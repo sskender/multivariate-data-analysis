@@ -1,0 +1,356 @@
+---
+title: "MAP_02_Auditorne"
+author: "Damir Pintar"
+date: "09/03/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(readr)
+library(fBasics)
+library(ggplot2)
+library(GGally)
+library(gridExtra)
+library(plotly)
+library(ggcorrplot)
+library(car)
+library(ggfortify)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 7.25
+
+Amitriptyline is prescribed by some physicians as an antidepressant. However, there
+are also conjectured side effects that seem to be related to the use of the drug: irregular
+heartbeat, abnormal blood pressures, and irregular waves on the electrocardiogram,
+among other things. Data gathered on 17 patients who were admitted to the hospital
+after an amitriptyline overdose are given in Table 7.6. The two response variables
+are
+
+Y2 = Amount of amitriptyline present in TCAD plasma level (AMI)
+Y1 = Total TCAD plasma level (TOT)
+
+The five predictor variables are
+
+Z5 = QRS wave measurement (QRS)
+Z4 = Diastolic blood pressure (DIAP)
+Z3 = PR wave measurement (PR)
+Z2 = Amount of antidepressants taken at time of overdose (AMT)
+Z1 = Gender: 1 if female, 0 if male (GEN)
+
+
+
+
+# RJEŠENJE
+
+Učitavamo podatke, provjeravamo učitanko kroz funkcije `summary` i `head`.
+
+
+
+```{r}
+ami <- read_csv("datasets/T7-6.csv")
+summary(ami)
+```
+
+
+```{r}
+head(ami)
+```
+
+
+Stupac `GEN` je faktorska varijabla, faktoriziramo i mijenjamo imena razina prema danom predlošku.
+
+
+```{r}
+ami$GEN <- as.factor(ami$GEN)
+levels(ami$GEN) <- c("male", "female")  # 0, 1
+head(ami)
+```
+
+Možemo napraviti upareni graf radi uvida u podatke.
+
+
+```{r, message = F}
+ggpairs(ami)
+```
+
+
+
+## a) Predviđanje TOT varijable
+
+Stvorimo model sa jednim odgovorom za predviđanje varijable `TOT`.
+
+```{r}
+lm.fit.TOT <- lm(TOT ~ GEN + AMT + PR + DIAP + QRS, data = ami) # sve osim AMI je regresor
+```
+
+
+```{r}
+summary(lm.fit.TOT)
+```
+
+
+```{r}
+# pazi - veliko A!
+Anova(lm.fit.TOT) #isti rezultati kao i `summary`
+```
+
+Isključujemo varijable sa razinom signifikantnosti < 0.05 i ponovo treniramo.
+
+
+```{r}
+lm.fit.TOT.new <- update(lm.fit.TOT, . ~ . - QRS)
+summary(lm.fit.TOT.new)
+```
+
+Ukloniti ćemo i DIAP...
+
+
+```{r}
+# može i lm.fit.TOT.new <- update(lm.fit.TOT.new, . ~ . - DIAP)
+lm.fit.TOT.new <- update(lm.fit.TOT, . ~ . - QRS - DIAP)
+summary(lm.fit.TOT.new)
+```
+
+A možemo i PR...
+
+```{r}
+lm.fit.TOT.new <- update(lm.fit.TOT, . ~ . - QRS - DIAP - PR)
+summary(lm.fit.TOT.new)
+```
+
+
+Uvid u grafove reziduala...
+
+```{r}
+autoplot(lm.fit.TOT.new)
+```
+
+Interval pouzdanosti i interval predikcije za novu varijablu:
+
+
+```{r}
+newdata <- data.frame(GEN = "female",  AMT = 1200)
+predict(lm.fit.TOT.new, newdata, interval = "confidence")
+```
+
+```{r}
+predict(lm.fit.TOT.new, newdata, interval = "prediction")
+```
+
+
+
+## b) Predviđanje AMI varijable - za DZ!
+
+(ponoviti proceduru, zadržati samo varijable na 0.05 razini signifikantnosti nakon re-treniranja)
+
+
+
+## c) Predviđanje TOT + AMI
+
+
+Radimo model multiple multivarijatne regresije - kombinacija `TOT` i `AMI` je ciljna varijabla, sve ostalo su regresori.
+
+Funkcija `summary` daje nam opće informacije o modelu.
+
+
+```{r}
+mlm.fit <- lm(cbind(TOT, AMI) ~ ., data = ami)
+summary(mlm.fit)
+```
+
+
+Uočimo - dobili smo regresijke modele jednake inicijalnim regresijskim modelima za samo jednu ciljnu varijablu!
+
+Pogledajmo koeficijente i reziduale:
+
+
+
+```{r}
+coef(mlm.fit)
+```
+
+```{r}
+resid(mlm.fit)
+```
+
+
+Kako proučiti reziduale? Nažalost ove funkcije nisu implementirane.. :(
+
+```{r}
+#plot(mlm.fit)
+#autoplot(mlm.fit)
+```
+
+Koristimo zaobilazno rješenje preuzeto sa: https://stackoverflow.com/questions/39562631/obtain-standardised-residuals-and-residual-v-s-fitted-plot-for-mlm-object-f
+
+```{r}
+## define our own "rstandard" method for "mlm" class
+rstandard.mlm <- function (model) {
+  Q <- with(model, qr.qy(qr, diag(1, nrow = nrow(qr$qr), ncol = qr$rank)))  ## Q matrix
+  hii <- rowSums(Q ^ 2)  ## diagonal of hat matrix QQ'
+  RSS <- colSums(model$residuals ^ 2)  ## residual sums of squares (for each model)
+  sigma <- sqrt(RSS / model$df.residual)  ##  ## Pearson estimate of residuals (for each model)
+  pointwise_sd <- outer(sqrt(1 - hii), sigma)  ## point-wise residual standard error (for each model)
+  model$residuals / pointwise_sd  ## standardised residuals
+  }
+
+```
+
+
+```{r}
+plot(fitted(mlm.fit), resid(mlm.fit), col = as.numeric(col(fitted(mlm.fit))), pch = 19)
+```
+
+
+Imamo dvije standardne greške reziduala:
+
+
+```{r}
+sigma(mlm.fit)
+```
+
+Matrica varijance/kovarijance modela:
+
+
+```{r}
+vcov(mlm.fit)
+```
+
+Za lakši uvid možemo napraviti korelacijsku matricu i zatražiti grafički prikaz:
+
+```{r}
+ggcorrplot(cov2cor(vcov(mlm.fit)), type = "lower", lab = T)
+```
+
+
+```{r}
+#anova(mlm.fit) ne! ova funkcija neće detektirati da se radi o multivar ciljnoj var
+# anova() f-ju možemo npr. koristiti za usporedbu dva modela (sa manje ili više regresora)
+```
+
+
+```{r}
+Anova(mlm.fit)
+```
+
+
+Uklonimo PR, DIAP i QRS iz modela, a potom možemo uz pomoć `anova` funkcije (malo "a"!) provjeriti da li se radi o dobroj odluci.
+
+```{r}
+mlm2.fit <- update(mlm.fit, . ~ . - PR - DIAP - QRS)
+anova(mlm.fit, mlm2.fit)
+```
+
+
+Alternativna funkcija `linearHypothesis` omogućuje da formalnije zadamo test hipoteza i dobijemo niz korisnih statistika.
+
+
+```{r}
+lh.out <- linearHypothesis(mlm.fit, hypothesis.matrix = c("PR = 0", "DIAP = 0", "QRS = 0"))
+lh.out
+```
+
+Izlazni objekt `lh.out` je snimio matrice `E` (epsilon!) i `H`, ukoliko želimo možemo ih izdvojiti i sami preko formula naučenih na predavanju izračunati gornje statistike.
+
+
+
+```{r}
+#Wilks
+E <- lh.out$SSPE
+H <- lh.out$SSPH
+det(E)/det(E + H)
+```
+
+```{r}
+#Pillai
+sum(diag(H %*% solve(E + H)))
+```
+
+```{r}
+#Hotelling - Lawley
+sum(diag(H %*% solve(E)))
+```
+
+```{r}
+#Roy
+e.out <- eigen(H %*% solve(E))
+max(e.out$values)
+```
+
+
+Stvorimo opet novu predikciju preko vrijednosti iz `newdata`
+
+
+```{r}
+#newdata <- data.frame(GEN = "female", AMT = 1200)
+p <- predict(mlm2.fit, newdata)
+p
+```
+
+Za sada ne postoji funkcija koja može grafički prikazati elipsoid pouzdanosti i elipsoid predikcije; za ovo možemo preuzeti i prilagoditi rješenje sa 
+https://data.library.virginia.edu/getting-started-with-multivariate-multiple-regression/ .
+
+
+
+```{r}
+predictionEllipse <- function(mod, newdata, level = 0.95){
+  # labels
+  lev_lbl <- paste0(level * 100, "%")
+  resps <- colnames(mod$coefficients)  # imena ciljeva
+  title <- paste(lev_lbl, "elipsoid pouzdanosti i predikcije za ", resps[1], "i", resps[2])
+  
+  # prediction
+  p <- predict(mod, newdata) # matrica rezultata
+  
+  # center of ellipse
+  cent <- c(p[1,1],p[1,2])  # vektor centra (numeric 1x2)
+  
+  # shape of ellipse
+  Z <- model.matrix(mod)  # model matrica
+  Y <- mod$model[[1]]  # matrica ciljnih varijabli
+  n <- nrow(Y)
+  m <- ncol(Y)
+  r <- ncol(Z) - 1
+  S <- crossprod(resid(mod))/(n-r-1)
+  
+  # radius of circle generating the ellipse
+  tt <- terms(mod)
+  Terms <- delete.response(tt)
+  mf <- model.frame(Terms, newdata, na.action = na.pass, 
+                   xlev = mod$xlevels)
+  z0 <- model.matrix(Terms, mf, contrasts.arg = mod$contrasts)
+  radConf <- sqrt(
+                  (m*(n-r-1)/(n-r-m)) *
+                   qf(level,m,n-r-m) * 
+                   z0 %*% solve(t(Z)%*%Z) %*% t(z0))
+  
+  radPred <- sqrt(
+                  (m*(n-r-1)/(n-r-m)) *
+                   qf(level,m,n-r-m) * 
+                   (1 + z0 %*% solve(t(Z)%*%Z) %*% t(z0)))
+  
+  
+  # generate ellipse using ellipse function in car package
+  ell_points_conf <- car::ellipse(center = c(cent), shape = S, radius = c(radConf), draw = FALSE)
+  ell_points_pred <- car::ellipse(center = c(cent), shape = S, radius = c(radPred), draw = FALSE)
+
+  
+  # ggplot2 plot
+  require(ggplot2, quietly = TRUE)
+  ell_points_conf_df <- as.data.frame(ell_points_conf)
+  ell_points_pred_df <- as.data.frame(ell_points_pred)
+  #ell_points_df <- rbind(ell_points_conf_df, ell_points_pred_df)
+  ggplot(ell_points_conf_df, aes(x, y)) + geom_path() + geom_path(data = ell_points_pred_df, aes(x = x, y = y), col = "blue") +
+      geom_point(aes(x = TOT, y = AMI), data = data.frame(p)) + 
+      labs(x = resps[1], y = resps[2], 
+           title = title)
+  
+}
+
+predictionEllipse(mod = mlm2.fit, newdata = newdata)
+```
+
+
+
