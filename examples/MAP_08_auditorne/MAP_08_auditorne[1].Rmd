@@ -1,0 +1,211 @@
+---
+title: "Multivarijatna analiza podataka"
+author: "Azra Tafro"
+date: "svibanj 2022"
+output:
+  html_document: default
+  pdf_document: default
+subtitle: Višedimenzionalno skaliranje- auditorna vježba
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Primjer 1
+
+U datoteci eurodist nalaze se zračne udaljenosti između 21 europskih gradova, preuzeto iz The Cambridge Encyclopaedia. Prvo ćemo provesti klasično višedimenzionalno skaliranje.
+
+
+```{r Učitavanje podataka}
+#install.packages("datasets")
+library("datasets")
+cities = as.matrix(eurodist)
+rownames(cities)
+cities[1:10,1:10]
+
+```
+
+Koristeći kvadratnu matricu udaljenosti možemo "ručno" odrediti glavne koordinate.
+
+```{r}
+D2 <- cities^2
+## usrednjavanje matrice D
+n <- nrow(D2)
+ones <- rep(1, n)
+H <- diag(1, n) - (1 / n) * ones %*% t(ones)
+
+## double center the (squared) distance matrix
+B <- - (1 / 2)*H %*% D2 %*% H
+
+## dekompozicija matrice B
+eigen_dec <- eigen(B)
+## svojstveni vektori matrice B
+Q <- eigen_dec$vectors
+
+## scree plot svojstvenih vrijednosti
+plot(
+  x = seq(1:length(eigen_dec$values)), y = eigen_dec$values,
+  type = "o",
+  xlab = "Br.", ylab = "Svojstvene vrijednosti");
+
+## Neke svojstvene vrijednosti su negativne jer početna udaljenost nije euklidska.
+
+## Rekonstrukcija svih točaka
+Lambda <- diag(eigen_dec$values) 
+X <- Q %*% (Lambda ^ (0.5))
+
+
+## Prema scree plotu odabrali bismo k=3, ali za grafički prikaz uzet ćemo k=2.
+k <- 2
+
+Xk <- Q[, 1:k] %*% (Lambda ^ 0.5)[1:k, 1:k]
+Xk
+
+plot(Xk, xlab="Coordinate 1", ylab="Coordinate 2",
+     main="European cities - first solution", type="n")
+text(Xk, labels = row.names(cities), cex=0.7)
+ ## Vidimo da "karta" ne izgleda kako smo navikli - potrebno je zrcaliti y os
+
+Xk[,2] <- -Xk[,2]
+plot(Xk, xlab="Coordinate 1", ylab="Coordinate 2",
+     main="European cities", type="n")
+text(Xk, labels = row.names(cities), cex=0.7)
+```
+
+Isti postupak možemo ponoviti naredbom cmdscale:
+
+```{r}
+mds <- cmdscale(cities, k=2, eig=TRUE)
+x <- mds$points[, 1]
+y <- mds$points[, 2]
+
+plot(x, y, xlab="Coordinate 1", ylab="Coordinate 2",
+     main="European cities - first solution", type="n")
+text(x, y, labels = row.names(cities), cex=0.7)
+
+y <- -y
+
+plot(x, y, xlab="Coordinate 1", ylab="Coordinate 2",
+     main="European cities", type="n")
+text(x, y, labels = row.names(cities), cex=0.7)
+```
+
+Možemo se i računski uvjeriti da su rezultati dobiveni na oba načina (gotovo) identični:
+
+```{r}
+sum((x-Xk[,1])^2)
+sum((y-Xk[,2])^2)
+```
+
+Metričko VDS Sammon metodom:
+
+```{r}
+#install.packages("MASS")
+library("MASS")
+mds_sammon=sammon(cities, y = cmdscale(cities, 2), k = 2, niter = 100, trace = TRUE,
+       magic = 0.2, tol = 1e-4)
+
+## 'magic' je parametar koji kontrolira korak Newtonove metode
+names(mds_sammon)
+x1 <- mds_sammon$points[, 1]
+y1 <- mds_sammon$points[, 2]
+
+
+plot(mds_sammon$points, xlab="Coordinate 1", ylab="Coordinate 2",
+     main="European cities - first solution (Sammon)", type="n")
+text(mds_sammon$points, labels = row.names(cities), cex=0.7)
+
+y1 <- -y1
+
+plot(x1, y1, xlab="Coordinate 1", ylab="Coordinate 2",
+     main="European cities (Sammon)", type="n")
+text(x1, y1, labels = row.names(cities), cex=0.7)
+```
+
+# Primjer 2
+
+U datoteci ekman nalaze se ocjene sličnosti (dissimilarities) različitih nijansi boja. Sličnosti pretvaramo u različitosti i prikazujemo metodom klasičnog metričkog skaliranja.
+
+```{r}
+#install.packages("smacof")
+library("smacof")
+colors <- ekman
+colors=as.matrix(colors)
+colors <- 1-colors 
+colors <- colors - diag(1,ncol(colors), nrow(colors)) 
+fit <- cmdscale(colors, eig = TRUE, k = 2)
+plot(fit$points, xlab="Coordinate 1", ylab="Coordinate 2",
+     main="Colors (Ekman)", type="n")
+text(fit$points, labels = row.names(colors), cex=1)
+```
+
+# Primjer 3
+
+Skaliranje korelacijske matrice za podatke iz mtcars:
+
+```{r}
+library(dplyr)
+library(ggpubr)
+kor_matr <- cor(mtcars, method = "spearman")
+mds_mtcars <- sqrt(1 - kor_matr^2) %>%
+  cmdscale() %>%
+  as_tibble()
+colnames(mds_mtcars) <- c("Coordinate 1", "Coordinate 2")
+ggscatter(mds_mtcars, x = "Coordinate 1", y = "Coordinate 2", 
+          size = 1,
+          label = colnames(kor_matr),
+          font.label = c(16, "plain"),
+          repel = TRUE)
+```
+
+# Primjer 4 
+
+U datoteci plaindist.csv nalaze se ocjene različitosti (dissimilarities) izgleda slova engleske abecede.
+
+```{r}
+plaindist <- read.csv("plaindist.csv")
+letters <- as.matrix(plaindist[, -1])
+colnames(letters) <- LETTERS
+rownames(letters) <- LETTERS
+letters=as.dist(letters) #ulazni podaci moraju biti u dist formatu
+
+mds_cmd=cmdscale(letters, eig=TRUE, k=2)
+x <- mds_cmd$points[, 1]
+y <- fit$points[, 2]
+
+plot(mds_cmd$points, xlab="Coordinate 1", ylab="Coordinate 2",
+     main="Letters (classic)",type = "n")
+text(mds_cmd$points, labels = LETTERS)
+
+mds_sam=sammon(letters, k=2)
+library(MASS)
+
+plot(mds_sam$points, xlab="Coordinate 1", ylab="Coordinate 2",
+     main="Letters (Sammon)",type = "n")
+text(mds_sam$points, labels = LETTERS)
+
+mds_iso=isoMDS(letters, y = cmdscale(letters, 2), k=2)
+plot(mds_iso$points, xlab="Coordinate 1", ylab="Coordinate 2",
+     main="Letters (isometric)",type = "n")
+text(mds_iso$points, labels = LETTERS)
+```
+
+Recimo da smo se odlučili za nemetričko (izometričko) skaliranje. Kako bismo odredili optimalni broj dimenzija p, moramo izračunati vrijednosti stress funkcije za različite dimenzije:
+
+```{r, results='hide'}
+stress=rep(0,10)
+for (i in 1:10){
+d=isoMDS(letters, k=i+1);
+stress[i]=d$stress
+}
+```
+
+Graficki prikaz:
+
+```{r}
+stress #stress je vec izrazen kao postotak
+plot(c(2:11),stress, xlab = "Br. dimenzija")
+```
+
+Prva vrijednost manja od 5% je za p=7, a graf sugerira da je pregib za p=5.

@@ -1,0 +1,246 @@
+---
+title: "Multivarijatna analiza podataka"
+subtitle: "Faktorska analiza - auditorna vježba"
+output: html_document
+date: 'Travanj 2022'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Uvod 
+
+U ovoj bilježnici nalazi se primjena eksploratorne faktorske analize na podatke o povijesnim cijenama investicijskih fondova.  Konkretno, radi se o sljedećim fondovima:
+- `SPY` (SPDR S&P 500 ETF Trust) - dionice tvrtki s američkog tržišta
+- `AGG` (iShares Core U.S. Aggregate Bond ETF) - obveznice s američkog tržišta
+- `VWO` (Vanguard FTSE Emerging Markets ETF) - dionice tvrtki s tržišta u razvoju
+- `EFA` (iShares MSCI EAFE ETF) - dionice tvrtki međunarodnih razvijenih tržišta
+- `BNDX` (Vanguard Total International Bond ETF) - obveznice s međunarodnih razvijenih tržišta
+- `GLD` (SPDR Gold Trust) - zlato.
+
+Podatci o fondovima i njihove tjedne povijesne cijene nalaze se u datotekama `ETF.info.csv` i `ETF.prices.csv`.
+
+```{r ucitavanje podataka}
+
+ETF.info = read.csv(file = 'ETF_info.csv')
+ETF.prices = read.csv(file = 'ETF_prices.csv')
+ETF.prices$Time = as.Date(ETF.prices$Time, "%d-%b-%Y")
+
+```
+
+Pri radu s povijesnim tržišnim podatcima koriste se povrati - postotne promjene cijena.
+
+```{r izracun povrata}
+
+n = nrow(ETF.prices)
+p = ncol(ETF.prices)
+
+ETF_returns = ((data.matrix(ETF.prices[2:n,2:p]) - data.matrix(ETF.prices[1:(n-1),2:p]))/data.matrix(ETF.prices[1:(n-1),2:p]))
+
+ETF_returns = cbind(ETF.prices$Time[2:n],as.data.frame(ETF_returns))
+names(ETF_returns)[1] <- "Time"
+
+```
+
+Koristeći tjedne povrate moguće je izračunati kumulativne povrate kroz cijeli period i usporediti ih za različite fondove. Uspoređujući kumulativne povrate (koji su isto oblika kao cijene, uz to da za sve različite fondove svi kreću od iste točke), možemo provjeriti kako izgledaju podatci i postoje li neke sličnosti među različitim fondovima.
+
+```{r prikaz kumulativnih povrata}
+
+ETF.cumulative.ret = cbind(ETF.prices$Time[2:n],cumprod(ETF_returns[,2:p]+1)-1)
+names(ETF.cumulative.ret)[1] <- "Time"
+
+library("reshape2")
+library("ggplot2")
+ggplot(melt(ETF.cumulative.ret,id.vars="Time"),aes(x = Time,y = value,col = variable))+geom_line()
+
+```
+
+# Kovarijanca i korelacija
+
+Za faktorsku analizu potrebno je izračunati i ispitati matrice kovarijance i/ili korelacije - to radimo na tjednim povratima fondova. 
+
+```{r kovarijanca}
+
+Q = cov(ETF_returns[,2:p])
+
+print(Q)
+
+```
+
+Korelacija:
+
+```{r korelacija}
+
+library(ggplot2)
+library(GGally) 
+
+R = cor(ETF_returns[,2:p])
+ggcorr(ETF_returns,label = TRUE, label_size=3, cex=3)
+
+dev.print(pdf,"ETF_return_corr.pdf") 
+
+```
+U korelacijskoj matrici primjećujemo što i u grafovima kumulativnih povrata - postoje ugrubo dvije grupe fondova - jedna odgovara dionicama a druga obveznicama, a fond koji prati cijenu zlata je donekle bliži  grupi obveznica (gledajući korelacijski koeficijent).
+
+# Faktorska analiza
+
+## Metoda glavnih komponenti - matrica korelacije
+
+Svojstvene vrijednosti i vektori korelacije:
+
+```{r svojstvene vrijednosti i vektori korelacije}
+
+ev_R = eigen(R)
+
+lambda_R = ev_R$values
+e_R = ev_R$vectors
+
+```
+
+```{r scree plot}
+
+#scree plot za glavne komponente kovarijance
+plot(lambda_R, type = "b", cex.lab=0.75, cex.main=0.75, cex.axis=0.75, xlab="i", ylab=expression(lambda["i"]), main='Scree plot svojstvenih vrijednosti korelacijske matrice')
+grid()
+
+```
+
+U ovom slučaju vidimo najistaknutiju promjenu u objašnjenoj varijanci između 2. i 3. svojstvene vrijednosti - dakle zadržat ćemo dvije komponente.
+
+```{r procjena koeficijenata modela koristeci matricu korelacije i metodu glavnih komponenti}
+
+L = sqrt(lambda_R[1])*e_R[,1]
+L = cbind(L,sqrt(lambda_R[2])*e_R[,2])
+
+h = rowSums(L^2)
+
+psi = 1-h
+
+print(L)
+
+```
+
+Iz koeficijenata faktorskog modela vidimo da prva glavna komponenta razlikuje dvije grupe (dionice i obveznice), a druga, iako ide u smjeru svih fondova, ima veće magnitude koeficijenata u smjeru obveznica i zlata.
+
+```{r rezidualna matrica}
+
+residual = R - L%*%t(L) - diag(psi)
+
+print(residual)
+
+```
+
+Iz rezidualne matrice vidimo da je većina korelacija ovim modelom dobro objašnjena, uz iznimku nekih parova (SPY-VWO, BNDX-GLD, AGG-GLD).
+
+## Principal factor metoda
+
+Modificirana metoda glavnih komponenti (tzv. principal factor metoda) uzima u obzir reduciranu matricu korelacije ili kovarijance. Uobičajeno se koristi kroz nekoliko iteracija, no u ovom slučaju je vidljivo da će već u prvoj iteraciji dati iste rezultate kao i originalna metoda glavnih komponenti.
+
+```{r principal factor metoda}
+
+R.reduced = R
+diag(R.reduced) = (1 - 1 / diag(solve(R)))
+
+eigen.R.reduced = eigen(R)
+
+L.reduced = as.matrix(eigen.R.reduced$vectors[,1:2]) %*% diag(sqrt(eigen.R.reduced$values[1:2]))
+
+h.reduced = rowSums(L.reduced^2)
+
+L.reduced
+
+```
+
+## Metoda najveće izglednosti
+
+Metoda najveće izglednosti je jedna od najčešće korištenih metoda procjene faktorskih modela, kada imamo dovoljno podataka (što je ovdje slučaj). Najlakše ju je koristiti kroz implementaciju u stats paketu u funkciji `factanal()`, koji vraća listu s rezultatima analize iz koje je moguće pregledati i ispisati koeficijente. Napomena: `factanal()` u pravilu standardizira podatke, tako da se u procjeni uvijek koristi matrica korelacije.
+
+```{r mle}
+
+fa = factanal(factors = 2, covmat = R,rotation="none")
+
+fa$loadings
+
+```
+
+Iako su vidljive razlike u procjenama, sama interpretacija procijenjenih koeficijenata ne razlikuje se previše od prethodne. Uz to, moguće je ispisati i specifične varijance i pregledati rezidualnu matricu.
+
+```{r zajednicki dio i specificna varijanca}
+
+rowSums(fa$loadings^2)
+fa$uniqueness
+
+```
+
+```{r mle - rezidualna matrica}
+
+residual = R - fa$loadings%*%t(fa$loadings) - diag(fa$uniquenesses)
+round(residual,digits = 3)
+
+```
+
+
+## Metoda najveće izglednosti s rotacijom
+
+Procijenjene faktore moguće je i rotirati, u potrazi za boljom interpretacijom pojedinih faktora. U samoj funkciji implementirano je više različitih rotacijskih metoda, a u ovom slučaju koristit ćemo varimax. Važna napomena: u slučaju malih vrijednosti, pojedini koeficijenti nisu prikazani kako bi se skrenula pozornost na samo bitnije koeficijente - to što koeficijenti nisu prikazani ne znači da su jednaki nuli (ovo ponašanje je također moguće podesiti argumentom `cutoff`).
+
+```{r mle - rotacija}
+
+fa = factanal(factors = 2, covmat = R,rotation="varimax")
+
+print(fa$loadings)
+
+```
+
+Za razliku od metode glavnih komponenti, u slučaju promjene broja faktora u metodi najveće izglednosti, promijenit će se i sve procjene koeficijenata faktorskog modela.
+
+```{r mle - 3 faktora}
+
+fa = factanal(factors = 3, covmat = Q, rotation="varimax")
+
+print(fa$loadings)
+
+```
+
+
+# Procjena realizacija faktora
+
+Same realizacije faktora moguće je procijeniti koristeći istu implementaciju u R-u. Dostupne su metode otežanih najmanjih kvadrata (Bartlettova) i regresijska metoda, no njihove procjene, u ovisnosti o podatcima, mogu biti vrlo slične. Same procjene realizacija faktora dostupne su u `scores` varijabli.
+
+U nastavku ćemo koristiti originalne podatke (ne standardizirane - dakle, matricu kovarijance) za procjenu faktorskog modela i realizacija faktora, uz varimax rotaciju.
+
+```{r factor scores}
+
+num.factors = 3
+
+fa.bart.scores = factanal(x = as.matrix((ETF_returns[,2:p])), factors = num.factors,rotation="varimax", scores="Bartlett")
+
+fa.reg.scores = factanal(x = as.matrix((ETF_returns[,2:p])), factors = num.factors,rotation="varimax", scores="regression")
+
+```
+
+Faktori su procijenjeni tako da imaju jediničnu kovarijancu - budući da povrati financijskih vrijednosnica imaju nekoliko redova veličine manje varijance, možemo skalirati procijenjene realizacije faktora tako da budu sličnije varijancama podatka. Skalirane procjene možemo interpretirati kao povrate faktora koji utječu na razmatrane fondove, te prikazati njihove kumulativne povrate kroz vrijeme i tako ih usporediti. Napomena: procijenjene realizacije faktora nisu kumulativni povrati, njih koristimo samo kao vizualizaciju (budući da sami povrati nalikuju šumu i teško ih je vizualizirati).
+
+```{r factor scores plot}
+
+F.ret.bart = cbind(ETF.prices$Time[2:n],as.data.frame(fa.bart.scores$scores/50))
+names(F.ret.bart) <- c("Time","F1","F2","F3")
+F.ret.reg = cbind(ETF.prices$Time[2:n],as.data.frame(fa.reg.scores$scores/50))
+names(F.ret.reg) <- c("Time","F1","F2","F3")
+
+
+F.ret.bart.cumulative = cbind(ETF.prices$Time[2:n],(cumprod(F.ret.bart[,2:(num.factors+1)]+1)-1))
+names(F.ret.bart.cumulative)[1] <- "Time"
+
+F.ret.reg.cumulative = cbind(ETF.prices$Time[2:n],(cumprod(F.ret.reg[,2:(num.factors+1)]+1)-1))
+names(F.ret.reg.cumulative)[1] <- "Time"
+
+ggplot(melt(F.ret.bart.cumulative,id.vars="Time"),aes(x = Time,y = value,col = variable))+geom_line()
+
+ggplot(melt(F.ret.reg.cumulative,id.vars="Time"),aes(x = Time,y = value,col = variable))+geom_line()
+
+
+```
+ 
+

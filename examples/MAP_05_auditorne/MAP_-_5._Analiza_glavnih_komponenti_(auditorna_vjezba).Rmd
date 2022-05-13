@@ -1,0 +1,210 @@
+---
+title: "Multivarijatna analiza podataka"
+subtitle: "Analiza glavnih komponenti - auditorna vježba"
+output: html_document
+date: 'Travanj 2022'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Uvod 
+
+U ovom dokumentu dana je primjena analize glavnih komponenti na podatke iz `mtcars` skupa podataka. Varijable u podatcima su:
+
+- `mpg`	(eng. miles per gallon) - mjera efikasnosti potrošnje goriva,
+- `cyl`	- broj cilindara,
+- `disp` - kubikaža motora (u kubičnim inčima),
+- `hp` - broj konjskih snaga motora,
+-	`drat` - prijenosni odnos,
+- `wt` - težina automobila (mjerena u 1000 lbs),
+- `qsec` - koliko sekunda je potrebno za preći	1/4 milje,
+- `vs` - oblik motora (0 = V-shaped, 1 = straight),
+- `am` - mijenjač (0 = automatic, 1 = manual),
+- `gear` - broj brzina,
+- `carb` - broj rasplinjača.
+
+```{r ucitavanje podataka}
+
+data = mtcars
+summary(data)
+
+```
+
+# Kovarijanca i korelacija
+
+Često je dobro vizualizirati korelaciju i kovarijancu - no zbog velikih razlika u varijancama pojedinih varijabli ponekad nije moguće smisleno vizualizirati kovarijancu.
+
+Kovarijanca:
+
+```{r kovarijanca}
+Q = cov(data)
+
+print(round(Q,digits=2))
+
+```
+Korelacija:
+
+```{r korelacija}
+library(GGally) # za ggcorr
+
+R = cor(data)
+ggcorr(data,label = TRUE, label_size=3, cex=3)
+
+```
+
+# Analiza glavnih komponenti 
+
+## Svojstvena dekompozicija kovarijance
+
+Svojstvene vrijednosti i vektori kovarijance:
+
+```{r svojstvene vrijednosti i vektori kovarijance}
+
+ev_Q = eigen(Q)
+# extract components
+lambda_Q = ev_Q$values
+e_Q = ev_Q$vectors
+
+#svojstveni vektori
+print(round(ev_Q$vectors, digits=3))
+
+#Svojstvene vrijednosti
+print(round(ev_Q$values, digits=3))
+
+```
+
+## PCA pomoću R funkcije
+
+U R-u postoji više funkcija koje implementiraju analizu glavnih komponenti - najpopularnije su `prcomp` i `princomp`. Prva radi pomoću SVD dekompozicije podataka X, a druga pomoću svojstvene dekompozicije kovarijance, ali pritom koristi pristrani procjenitelj varijance. U nastavku vježbe koristimo `prcomp`.
+
+```{r svojstvene vrijednosti i vektori kovarijance - prcomp}
+#center = TRUE i scale = FALSE kombinacija odgovaraju dekompoziciji kovarijance
+pca.cov <- prcomp(data, center = TRUE,scale = FALSE)
+
+#svojstvene vrijednosti
+print(round(pca.cov$rotation,digits=3))
+
+#svojstvene vrijednosti
+print(round(pca.cov$sdev^2,digits=3))
+
+```
+
+Postotak objašnjene varijance:
+
+```{r postotak objasnjene varijance}
+#summary funkcija daje dobar pregled PCA rastava podataka
+summary(pca.cov)
+
+```
+
+## PCA standardiziranih varijabli (korelacija)
+
+
+```{r PCA standardiziranih varijabli}
+#center = TRUE i scale = TRUE kombinacija odgovaraju dekompoziciji korelacije
+pca.cor <- prcomp(data, center = TRUE,scale = TRUE)
+
+print(round(pca.cor$rotation,digits=3))
+
+summary(pca.cor)
+
+```
+
+## Odabir broja komponenti
+
+```{r scree plot}
+
+#scree plot za glavne komponente kovarijance
+plot(pca.cov$sdev^2, type = "b", cex.lab=0.75, cex.main=0.75, cex.axis=0.75, xlab="i", ylab=expression(lambda["i"]), main='Kovarijanca')
+grid()
+
+#scree plot za glavne komponente kovarijance
+plot(pca.cor$sdev^2, type = "b", cex.lab=0.75, cex.main=0.75, cex.axis=0.75, xlab="i", ylab=expression(lambda["i"]), main='Korelacija')
+grid()
+
+```
+
+## Vizualizacija glavnih komponenti
+
+```{r priprema podataka za vizualizaciju}
+#prije vizualizacije rotirajmo koeficijente tako da im je suma pozitivna
+#također izračunajmo korelacije između komponenti i originalnih varijabli
+for (i in 1:dim(pca.cov$rotation)[1]){
+  pca.cov$rotation[,i] = pca.cov$rotation[,i]*sign(sum(pca.cov$rotation[,i]))
+  pca.cor$rotation[,i] = pca.cor$rotation[,i]*sign(sum(pca.cor$rotation[,i]))
+}
+
+
+```
+
+```{r vizualizacija koeficijenata 1. i 2. glavne komponente}
+#barplot koeficijenata prve glavne komponente - za kovarijancu i korelaciju
+barplot(rbind(pca.cov$rotation[,1],pca.cor$rotation[,1]), beside=TRUE, col=c("red", "blue"), main="1. svojstveni vektor",ylab=expression("e"["i"]), cex.axis = 0.75, cex.names = 0.75, cex.main=0.85, cex.lab=0.75)
+legend("topright", 
+       legend = c("Kovarijanca","Korelacija"), 
+       fill = c("red", "blue"),
+       cex = 0.65)
+
+#barplot koeficijenata druge glavne komponente - za kovarijancu i korelaciju
+barplot(rbind(pca.cov$rotation[,2],pca.cor$rotation[,2]), beside=TRUE, col=c("red", "blue"), main="2. svojstveni vektor", ylab=expression("e"["i"]), cex.axis = 0.75, cex.names = 0.85, cex.main=0.85, cex.lab=0.75)
+legend("bottomright", 
+       legend = c("Kovarijanca","Korelacija"), 
+       fill = c("red", "blue"),
+       cex = 0.65)
+
+```
+
+
+
+```{r vizualizacija 1. glavne komponente - bar plot} 
+
+#izračun glavnih komponenti
+Y = as.matrix(scale(data))%*%pca.cor$rotation
+
+Y1.sorted.ind = order(Y[,1])
+
+par(las=2)
+barplot(Y[Y1.sorted.ind,1] ,main="1. glavna komponenta", horiz=FALSE,
+  names.arg=row.names(data[Y1.sorted.ind,]),ylab=expression("y"["i"]), cex.lab=0.7, cex.axis=0.7,cex.names=0.5,cex.main=0.7)
+
+```
+
+```{r vizualizacija 1. i 2. glavne komponente - scatter plot}
+
+Y = as.matrix(scale(data))%*%pca.cor$rotation
+
+plot(Y[,1],Y[,2], pch = 20, cex=0.7, cex.lab=0.5, cex.axis=0.5, xlab=expression("y"["1"]), ylab=expression("y"["2"]), xlim=c(-4.5,4.5), ylim=c(-4,4.5))
+grid()
+dev.print(pdf,"12_comp_scatter.pdf") 
+#moguce je dodati i tekst - pritom treba pripaziti na citljivost
+#text(Y[,1]+0.15,Y[,2]-0.2, row.names(data),cex=0.4)
+
+```
+
+```{r vizualizacija 1. i 2. glavne komponente - scatter plot}
+
+#mozemo dodati tekst i "zumirati" pojedine grupe koje mogu biti zanimljive
+plot(Y[,1],Y[,2], pch = 20, cex=0.7, cex.lab=0.5, cex.axis=0.5, xlab=expression("y"["1"]), ylab=expression("y"["2"]), xlim=c(1.6,2.5), ylim=c(-1.5,-0.5))
+grid()
+dev.print(pdf,"12_comp_scatter.pdf") 
+#moguce je dodati i tekst - pritom treba pripaziti na citljivost
+text(Y[,1]+0.05,Y[,2]-0.03, row.names(data),cex=0.4)
+
+```
+
+
+```{r qq plot prve glavne komponente}
+
+qqnorm(Y[,1])
+qqline(Y[,1])
+grid()
+
+```
+
+
+
+
+
+

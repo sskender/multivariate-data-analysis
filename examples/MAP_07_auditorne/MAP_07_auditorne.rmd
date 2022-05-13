@@ -1,0 +1,108 @@
+---
+title: "MAP_07_Auditorne"
+author: "Damir Pintar"
+date: "03/05/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(readr)
+library(fBasics)
+library(ggplot2)
+library(GGally)
+library(gridExtra)
+library(plotly)
+library(ggcorrplot)
+library(car)
+library(ggfortify)
+library(MASS)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Iris - LDA
+
+Učitavamo podatkovni okvir `iris`, provodimo kratku eksploratornu analizu.
+
+```{r}
+data(iris)
+glimpse(iris)
+```
+
+```{r}
+summary(iris)
+```
+
+Vizualizacija uparenih numeričkih stupaca obzirom na klasu (vrstu).
+
+
+```{r}
+ggpairs(iris, columns = 1:4, ggplot2::aes(colour=Species), progress = F)
+```
+
+Kako izgleda kovarijacijska matrica numeričkih stupaca?
+
+```{r}
+cov(iris[, 1:4])
+```
+
+Ako želimo intepretaciju linearnih diskrimnanti, skalirajmo stupce.
+
+
+```{r}
+iris2 <- iris
+iris2[, 1:4] <- scale(iris2[, 1:4])
+cov(iris2[, 1:4])
+```
+
+Provedimo LDA.
+
+
+```{r}
+lda.fit <- lda(Species ~ ., data = iris2)
+lda.fit
+```
+
+Izračunajmo predikcije.
+
+
+```{r}
+predictions <- predict(lda.fit, iris2)
+lapply(predictions, head)
+```
+
+Pogledajmo preko histograma koliko dobro diskriminante razdvajaju populacije.
+
+
+```{r}
+ldahist(data = predictions$x[,1], g = iris$Species)
+```
+
+```{r}
+ldahist(data = predictions$x[,2], g = iris$Species)
+```
+
+Ili, na jednom grafu:
+
+```{r}
+df <- data.frame(LD1 = predictions$x[,1], LD2 = predictions$x[,2], Species = iris$Species)
+df %>% ggplot(aes(x = LD1, y = LD2, col = Species)) + geom_point()
+```
+
+
+Konačno, procjenimo APER holdout procedurom (provodimo ju "pješke" radi boljeg uvida, u praksi bismo se oslonili na paket `caret`).
+
+
+
+```{r}
+mistakes <- 0
+for (i in 1:nrow(iris)) {
+  holdout <- iris[i, ]
+  iris.tmp <- iris[-i, ]
+  lda.fit <- lda(Species ~ ., data = iris.tmp)
+  if (predict(lda.fit, holdout)$class != holdout$Species) mistakes <- mistakes + 1 
+}
+
+str_c("APER: ",mistakes / nrow(iris) * 100, "%")
+```
+

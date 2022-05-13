@@ -1,0 +1,7 @@
+Ticker,Name,Segment,Issuer
+SPY,SPDR S&P 500 ETF Trust,"Equity: U.S. - Large Cap",State Street Global Advisors
+AGG,iShares Core U.S. Aggregate Bond ETF,"Fixed Income: U.S. - Broad Market, Broad-based Investment Grade",Blackrock
+VWO,Vanguard FTSE Emerging Markets ETF,"Equity: Emerging Markets - Total Market",Vanguard
+EFA,iShares MSCI EAFE ETF,"Equity: Developed Markets Ex-U.S. - Total Market",Blackrock
+BNDX,Vanguard Total International Bond ETF,"Fixed Income: Global Ex-U.S. - Broad Market, Broad-based Investment Grade",Vanguard
+GLD,SPDR Gold Trust,"Commodities: Precious Metals Gold",State Street Global Advisors
