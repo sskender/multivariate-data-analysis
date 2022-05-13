@@ -1,0 +1,129 @@
+---
+title: "2. laboratorijska vježba"
+subtitle: "Multivarijatna analiza podataka"
+date: "ak. god. 2021/2022"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## 1. Uvod i upute za predaju
+
+Cilj ove laboratorijske vježbe je primijeniti osnovne koncepte multivarijatne analize podataka, istražiti podatke te ispitati hipoteze. Preduvjet za rješavanje vježbe je osnovno znanje programskog jezika _R_ i rad s _R Markdown_ dokumentima. Sama vježba je koncipirana kao projekt u kojem istražujete i eksperimentirate koristeći dane podatke - ne postoji nužno samo jedan točan način rješavanja svakog podzadatka.
+
+Rješavanje vježbe svodi se na čitanje uputa u tekstu ovog dokumenta, nadopunjavanje blokova kôda (možete dodavati i dodatne blokove kôda ukoliko je potrebno) i ispisivanje rezultata (u vidu ispisa iz funkcija, tablica i grafova). Vježbu radite samostalno, a svoje rješenje branite na terminima koji su vam dodijeljeni u kalendaru. Pritom morate razumjeti teorijske osnove u okviru onoga što je obrađeno na predavanjima i morate pokazati da razumijete sav kôd koji ste napisali.
+
+Vaše rješenje potrebno je predati u sustav _Moodle_ u obliku dvije datoteke: 
+
+1. Ovaj .Rmd dokument s Vašim rješenjem (naziva IME_PREZIME_JMBAG.rmd),  
+2. PDF ili HTML dokument kao izvještaj generiran iz vašeg .Rmd rješenja (također naziva IME_PREZIME_JMBAG).
+
+Rok za predaju je **15. svibnja 2022. u 23:59h**. **Jedan od uvjeta za prolaz predmeta je minimalno ostvarenih 50% bodova na svim laboratorijskim vježbama. Nadoknade laboratorijskih vježbi neće biti organizirane.** Za sva dodatna pitanja svakako se javite na email adresu predmeta: _map@fer.hr_.
+
+
+## 2. Podatkovni skup
+U laboratorijskoj vježbi razmatra se dinamika cijena vrijednosnica na financijskim tržištima. Dane su povijesne tjedne cijene ETF-ova (eng. exchange traded fund) koji prate određene dioničke, obvezničke ili druge indekse. Konkretno, radi se o sljedećim fondovima:
+
+- `AGG` (iShares Core U.S. Aggregate Bond ETF) - obveznice s američkog tržišta,
+- `IEF` (iShares 7-10 Year Treasury Bond ETF) - srednjeročne državne obveznice,
+- `LQD` (iShares iBoxx $ Investment Grade Corporate Bond ETF) - korporativne obveznice,
+- `SHY` (iShares 1-3 Year Treasury Bond ETF) - kratkoročne državne obveznice,
+- `TIP` (iShares TIPS Bond ETF) - državne obveznice zaštićene od inflacije,
+- `TLT` (iShares 20+ Year Treasury Bond ETF) - dugoročne državne obveznice,
+- `DBC` (Invesco DB Commodity Index Tracking Fund) - sirovine i roba,
+- `GLD` (SPDR Gold Trust) - zlato,
+- `USO` (United States Oil Fund) - nafta,
+- `IJH` (iShares Core S&P Mid-Cap ETF) - dionice tvrtki s američkog tržišta,
+- `IWM` (iShares Russell 2000 ETF) - dionice američkih tvrtki s malim kapitalom,
+- `SPY` (SPDR S&P 500 ETF Trust) - dionice tvrtki s američkog tržišta,
+- `VTV` (Vanguard Value ETF) - dionice tvrtki s američkog tržišta,
+- `XLB` (Materials Select Sector SPDR Fund) - dionice tvrtki za materijale,
+- `XLE` (Energy Select Sector SPDR Fund) - dionice tvrtki energetskog sektora,
+- `XLF` (Financial Select Sector SPDR Fund) - dionice tvrtki financijskog sektora,
+- `XLI` (Industrial Select Sector SPDR Fund) - dionice tvrtki industrijskog sektora,
+- `XLK` (Technology Select Sector SPDR Fund) - dionice tvrtki iz tehnološkog sektora,
+- `XLP` (Consumer Staples Select Sector SPDR Fund) - dionice tvrki za necikličku potrošačku robu,
+- `XLU` (Utilities Select Sector SPDR Fund) - dionice tvrtki komunalnih djelatnosti,
+- `XLV` (Health Care Select Sector SPDR Fund) - dionice tvrtki iz zdravstvenog sektora,
+- `XLY` (Consumer Discretionary Select Sector SPDR Fund) - dionice tvrtki za cikličku potrošačku robu,
+- `IYR` (iShares U.S. Real Estate ETF) - dionice tvrtki iz područja nekretnina,
+- `VNQ` (Vanguard Real Estate Index Fund) - dionice tvrtki iz područja nekretnina.
+
+Pri modeliranju zajedničkog kretanja i rizika vrijednosnica, najčešće se koriste povrati: $R(t) = \frac{S(t)-S(t-1)}{S(t-1)},$ gdje je $S(t)$ cijena vrijednosnice u tjednu $t$. 
+
+### 2.1. Učitavanje podataka i korelacijska analiza
+Podaci se nalaze u datoteci "ETFprices.csv". Učitajte ih, provjerite ispravnost, izračunajte tjedne povrate te vizualizirajte matricu korelacije povrata - razmislite o grupama i korelacijskim strukturama koje u njoj vidite. U ostatku laboratorijske vježbe također koristite povrate, a ne cijene. 
+```{r}
+#  Vaš kôd ovdje 
+```
+
+## 3. Analiza glavnih komponenti
+Cilj ovog zadatka je analizirati kretanje danih ETF-ova i izračunati glavne komponente koje objašnjavaju njihovu dinamiku.
+
+### 3.1. Glavne komponente
+Izračunajte glavne komponente matrice korelacije i izračunajte koliki udio varijance objašnjavaju. Odredite broj glavnih komponenti koje ćete zadržati u analizi. Grafički prikažite i usporedite koeficijente prvih nekoliko komponenti.
+```{r}
+#  Vaš kôd ovdje 
+```
+
+Prikažite graf raspršenja prve dvije glavne komponente i proučite možete li primijetiti neke grupe fondova. 
+```{r} 
+#  Vaš kôd ovdje 
+```
+
+### 3.2. Svojstveni portfelji
+
+U primjeni PCA i svojstvenoj dekompoziciji kovarijance u financijama, svojstveni vektori se često zovu i tzv. svojstveni portfelji. Općenito, portfelj je vektor $w = [w_1,...,w_N]$ u kojem svaki element predstavlja težinu ili udio kapitala u određenoj vrijednosnici. Često je dobro pomnožiti njihove težine s predznakom njihove sume - na taj način zapravo samo "okrećemo" predznak svojstvenog vektora tako da mu je suma pozitivna (konačni PCA rastav je i dalje isti ako svojstveni vektor pomnožimo s -1). Također, dobro je i skalirati svojstvene portfelje sa sumom njihovih apsolutnih vrijednosti:
+$\tilde{w}_i = \frac{w_i}{\sum_j^N{\vert w_j \vert}}$.
+Na taj način se osigurava da visoke magnitude pojedinih elemenata ne uzrokuju velike razlike u volatilnostima svojstvenih portfelja.
+Ukoliko znamo povrate $R\in\mathbb{R}^{T\times N}$ (gdje je $R_i\in\mathbb{R}^{T}$ vektor povrata za vrijednosnicu $i$) za $N$ vrijednosnica u nekom vremenskom periodu od $T$ dana, povrate portfelja $w$ u tom istom periodu možemo izračunati kao:
+$R_p = \sum{R_i w_i} = R\cdot w$.
+Izračunajte skalirane svojstvene portfelje $\tilde{w}$ koji proizlaze iz prve dvije glavne komponente. Za ta dva svojstvena portfelja izračunajte povijesne povrate kroz razmatrani period. Grafički prikažite vremensko kretanje njihovih vrijednosti tako da njihove povrate "vratite" natrag u cijene, s tim da početna cijena bude jednaka za oba portfelja, npr. $V_0 = 100$. Vrijednost portfelja u trenutku $t$ možemo izračunati po formuli: $V_t = V_{t-1}\cdot(1+R_{t})$.
+
+
+```{r}
+#  Vaš kôd ovdje 
+```
+
+## 4. Faktorska analiza
+
+### 4.1. Metode procjena koeficijenata modela
+Na danim podacima odredite broj faktora te procijenite faktorski model pomoću metode glavnih komponenti i metode najveće izglednosti. Usporedite procjene ove dvije metode. Koja Vam se čini bolja? Što možete zaključiti iz vrijednosti faktora? Pronađite procjenu vrijednosti faktora koja daje najbolju interpretabilnost.
+```{r}
+#  Vaš kôd ovdje 
+```
+
+### 4.2. Specifične varijance faktora
+Izračunajte specifične varijance faktora za model s dva faktora i model s tri faktora. Pomoću stupčastog dijagrama prikažite i usporedite dobivene vrijednosti. 
+```{r}
+#  Vaš kôd ovdje 
+```
+
+## 5. Diskriminantna analiza
+Financijska tržišta su od listopada 2007. do srpnja 2009. godine bila u krizi. U datoteci "crisis.csv" za svaki tjedan iz prethodno učitanih povijesnih tjednih cijena možete pronaći je li tržište tada bilo u krizi ili ne - 1 predstavlja krizu, 0 predstavlja period bez krize. Učitajte nove podatke te ih spojite s tablicom povrata.
+```{r}
+#  Vaš kôd ovdje 
+```
+
+### 5.1. Diskriminantna analiza pomoću povrata
+
+Provedite diskriminantnu analizu koja tjedne odvaja na krizne i one bez krize pomoću povrata fondova. Pomoću stupčastog dijagrama prikažite vektore srednjih vrijednosti u krizi i izvan nje. Također, na isti način prikažite korelaciju fonda AGG (Aggregate Bond ETF-a) s ostalim fondovima u krizi i izvan krize. Usporedite rezultate linearne diskriminantne analize (funkcija u R-u: `lda`) i kvadratne diskriminantne analize (funkcija u R-u: `qda`) pomoću tablica konfuzije i mjere APER (eng. apparent error rate). Razmislite o tome koji je razlog razlike u rezultatima ove dvije metode.
+
+```{r}
+#  Vaš kôd ovdje 
+```
+
+### 5.2. Diskriminantna analiza pomoću glavnih komponenti
+
+Provedite diskriminantnu analizu kao u prošlom podzadatku, no ovaj put koristeći glavne komponente izračunate u 3. zadatku kao varijable. Provjerite i usporedite uspješnost klasifikacije koristeći tablice konfuzije i APER za različit broj komponenti. 
+
+```{r} 
+#  Vaš kôd ovdje 
+```
+
