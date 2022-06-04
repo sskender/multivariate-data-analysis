@@ -1,0 +1,182 @@
+---
+title: "3. laboratorijska vježba"
+subtitle: "Multivarijatna analiza podataka"
+date: "ak. god. 2021/2022"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("GGally")
+library(MASS)
+library(dplyr)
+library(ggrepel)
+library("FactoMineR")
+library("scatterplot3d")
+```
+
+## 1. Uvod i upute za predaju
+
+Cilj ove laboratorijske vježbe je primijeniti osnovne koncepte multivarijatne analize podataka, istražiti podatke te ispitati hipoteze. Preduvjet za rješavanje vježbe je osnovno znanje programskog jezika *R* i rad s *R Markdown* dokumentima. Sama vježba je koncipirana kao projekt u kojem istražujete i eksperimentirate koristeći dane podatke - ne postoji nužno samo jedan točan način rješavanja svakog podzadatka.
+
+Rješavanje vježbe svodi se na čitanje uputa u tekstu ovog dokumenta, nadopunjavanje blokova kôda (možete dodavati i dodatne blokove kôda ukoliko je potrebno) i ispisivanje rezultata (u vidu ispisa iz funkcija, tablica i grafova). Vježbu radite samostalno, a svoje rješenje branite na terminima koji su vam dodijeljeni u kalendaru. Pritom morate razumjeti teorijske osnove u okviru onoga što je obrađeno na predavanjima i morate pokazati da razumijete sav kôd koji ste napisali.
+
+Vaše rješenje potrebno je predati u sustav *Moodle* u obliku dvije datoteke:
+
+1.  Ovaj .Rmd dokument s Vašim rješenjem (naziva IME_PREZIME_JMBAG.rmd),\
+2.  PDF ili HTML dokument kao izvještaj generiran iz vašeg .Rmd rješenja (također naziva IME_PREZIME_JMBAG).
+
+Rok za predaju je **7. lipnja 2022. u 23:59h**. **Jedan od uvjeta za prolaz predmeta je minimalno ostvarenih 50% bodova na svim laboratorijskim vježbama. Nadoknade laboratorijskih vježbi neće biti organizirane.** Za sva dodatna pitanja svakako se javite na email adresu predmeta: [*map\@fer.hr*](mailto:map@fer.hr){.email}.
+
+## 2. Podatkovni skup
+
+U ovoj laboratorijskoj vježbi analizirat ćemo skup podataka s najpoznatijim klasičnim skladbama prema glasovima korisnika stranice [classicalmusiconly.com](https://classicalmusiconly.com/). Varijable su redom:
+
+-   `title` --- naziv skladbe
+-   `composer` --- ime skladatelja
+-   `category` --- kategorija skladbe
+-   `year` --- godina kada je skladba napisana
+-   `stars` --- broj glasova (koliko korisnika je označilo skladbu kao favorit)
+
+Varijable `composer` i `category` treba tretirati kao da se radi o kategorijskim varijablama.
+
+**Napomena:** ako koristite funkciju `factor` za modeliranje kategorijskih varijabli, tada je potrebno nakon filtriranja skupa podataka ponovno pozvati `factor` nad preostalim vrijednostima kategorijske varijabli --- u suprotnom će izbačene vrijednosti ostati zapamćene, što će davati nepregledne rezultate.
+
+## 2.1. Predobrada i analiza podataka
+
+Učitajte datoteku `classical.tsv` i proučite podatke.
+
+```{r}
+# Vaš kod ovdje
+```
+
+Proučite koliki je **ukupan broj skladbi po pojedinom skladatelju**, te koliki je **ukupan broj skladbi po pojedinoj kategoriji**. **Ispišite** ih poredano silazno po broju skladbi.
+
+```{r}
+# Vaš kod ovdje
+```
+
+**Ispišite** imena prvih deset skladatelja čije skladbe imaju **najveći ukupan broj glasova**, te prvih deset skladatelja čije skladbe imaju **najveći prosječan broj glasova**.
+
+```{r}
+# Vaš kod ovdje
+```
+
+Iz podataka **uklonite** sve skladbe čiji skladatelji se pojavljuju vrlo rijetko (npr. manje od 5--10 puta). Zatim, uklonite sve skladbe čija kategorija se pojavljuje vrlo rijetko (npr. manje od 5--10 puta).
+
+```{r}
+# Vaš kod ovdje
+```
+
+U ostatku vježbe koristite ovaj filtrirani podskup podataka.
+Obratite pozornost i na nedostajuće vrijednosti (ako ih ima). Razmislite na koji način ćete ih tretirati u ostatku vježbe.
+
+# 3. Višedimenzionalno skaliranje
+
+## 3.1. Metričko skaliranje
+
+**Izračunajte i prikažite** kontingencijsku tablicu za varijable `composer` i `category`.
+Budući da će kontingencijska tablica biti jako velika, prikažite samo njezin dio koji sadrži nekolicinu najčešćih skladatelja i kategorija.
+
+```{r}
+# Vaš kod ovdje
+```
+
+**Izračunajte** udaljenosti među kategorijama koristeći *totalnu varijacijsku udaljenost*. Neka je $C$ kontingencijska matrica dimenzija $N \times M$, te neka su skladatelji raspoređeni po retcima, a kategorije po stupcima. Udaljenost između dvije kategorije $i$ i $j$ računa se kao
+$$
+\delta_{i,j} = \frac{1}{2} \sum_{k=1}^N \left\lvert \frac{C_{k,i}}{S_i} - \frac{C_{k,j}}{S_j} \right\rvert,
+$$
+gdje je $S_i = \sum_{k=1}^N C_{k,i}$. **Izračunajte i vizualizirajte matricu udaljenosti kategorija.** Koji parovi kategorija su najsličniji, a koji najrazličitiji?
+
+```{r}
+# Vaš kod ovdje
+```
+
+Provedite postupak klasičnog višedimenzionalnog skaliranja. **Skicirajte** *scree plot* svojstvenih vrijednosti. Koliki broj dimenzija bi objasnio većinu varijance?
+
+```{r}
+# Vaš kod ovdje
+```
+
+**Prikažite** kategorije na grafu raspršenja s **dvije dimenzije** i **označite** koju kategoriju pojedina točka predstavlja. Uočavate li kakvo prirodno grupiranje kategorija?
+
+```{r}
+# Vaš kod ovdje
+```
+
+**Prikažite** graf raspršenja za skaliranje dobiveno *Sammon* metodom i **označite** koju kategoriju pojedina točka predstavlja. Usporedite ga s gore dobivenim grafom. Kakve razlike uočavate?
+
+```{r}
+# Vaš kod ovdje
+```
+
+## 3.2. Nemetričko skaliranje
+
+Odaberite proizvoljan broj skladatelja (npr. 10--30) s **najvećim prosječnim brojem** glasova po skladbama, te **kreirajte** novi podskup podataka tako da sadrži samo skladbe tih autora.
+
+```{r}
+# Vaš kod ovdje
+```
+
+U nastavku vježbe koristite ovako generirani podskup podataka.
+
+**Definirajte** jednu proizvoljnu mjeru različitosti između dva skladatelja. Vaša mjera različitosti može uključivati npr.
+
+-   euklidsku udaljenost između broja skladbi po kategorijama,
+-   korelacijsku udaljenost između broja skladbi po kategorijama,
+-   totalnu varijacijsku udaljenost između broja skladbi po kategorijama,
+-   ukupan broj skladbi po pojedinoj kategoriji,
+-   prosječnu godinu izdanja svih skladbi,
+-   ukupan broj glasova po svim skladbama,
+-   prosječan broj glasova po svim skladbama,
+-   ...
+
+Pokušajte konstruirati mjeru različitosti koju ćete moći intuitivno interpretirati.
+
+**Izračunajte** matricu različitosti za skladatelje koristeći Vašu mjeru različitosti. **Izračunajte** izometrično skaliranje i **prikažite** rezultat grafom raspršenja s **dvije dimenzije**, te **označite** koju kategoriju pojedina točka predstavlja. Možete li interpretirati dobiveni graf u skladu s korištenom mjerom različitosti?
+
+```{r}
+# Vaš kod ovdje
+```
+
+Ponovite jednu metodu **metričkog skaliranja** po izboru (klasično ili *Sammon*), ovaj puta korištenjem proizvoljne **mjere udaljenosti** nad skladateljima (npr. euklidska/korelacijska/*totalna varijacijska* udaljenost između broja skladbi po pojedinoj kategoriji). Pokušajte odabrati mjeru udaljenosti koju ćete lakše moći interpretirati. Možete li objasniti razlike u odnosu na prethodno dobiveni graf?
+
+```{r}
+# Vaš kod ovdje
+```
+
+# 4. Analiza korespondencije
+
+**Kreirajte** novi podskup podataka tako da sadrži samo skladbe **prvih 5--10 skladatelja** po nekom kriteriju --- proizvoljno odaberite kriterij po kojemu ćete ih poredati (npr. ukupan broj skladbi, ukupan broj glasova po svim skladbama, prosječan broj glasova po svim skladbama...). Zatim **odredite** koje kategorije skladbi se najčešće pojavljuju u dobivenom podskupu, te unutar njega zadržite samo skladbe koje pripadaju **5--10 najčešćih kategorija**.
+
+```{r}
+# Vaš kod ovdje
+```
+
+U nastavku vježbe koristite ovako generirani podskup podataka.
+
+**Izračunajte i prikažite** kontingencijsku tablicu između skladatelja i kategorije skladbi koje su napisali.
+
+```{r}
+# Vaš kod ovdje
+```
+
+**Prikažite** graf analize korespondencije između varijabli `composer` i `category`. Obratite pozornost na ukupnu objašnjenu varijancu. Na temelju dobivenog grafa i kontingencijske tablice iz prethodnog zadatka pokušajte odgovoriti na sljedeća pitanja:
+
+-   Koji skladatelji se najviše izdvajaju po pojedinoj kategoriji?
+-   Koji skladatelji su određenu kategoriju skladbi pisali znatno više ili manje u usporedbi s drugim skladateljima?
+-   Koji skladatelji su određenu kategoriju skladbi pisali znatno više ili manje od drugih kategorija?
+-   Koji skladatelji su pisali prosječan broj skladbi u svim kategorijama?
+
+```{r}
+# Vaš kod ovdje
+```
+
+Kreirajte novi podskup podataka tako da sadrži **5--10 skladatelja po Vašem izboru**. Zatim ponovno **odredite** koje kategorije skladbi se najčešće pojavljuju u dobivenom podskupu, te zadržite samo skladbe koje pripadaju **prvih 5--10 kategorija**.  **Izračunajte i prikažite** kontingencijsku matricu. **Prikažite** graf analize korespondencije. Pokušajte ponovo odgovoriti na gornja pitanja. Kakve nove zaključke možete izvesti?
+
+```{r}
+# Vaš kod ovdje
+```

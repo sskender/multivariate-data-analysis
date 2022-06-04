@@ -1,0 +1,122 @@
+---
+title: "Multivarijatna analiza podataka"
+author: "Azra Tafro"
+date: "svibanj 2022"
+output:
+  html_document: default
+  pdf_document: default
+subtitle: Analiza doživljenja - auditorna vježba
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+U datoteci veteran nalaze se podaci o ispitivanju dva različita tretmana za rak pluća (detalji u materijalima s predavanja ili u paketu 'survival').
+
+```{r Učitavanje podataka}
+#install.packages("survival")
+#install.packages("ggfortify")
+library("survival")
+library("ggfortify")
+
+veteran = force(veteran)
+
+head(veteran)
+```
+
+# Kaplan - Meier metoda
+
+Glavna funkcija je 'Surv' koja generira objekt doživljenja.
+
+
+```{r}
+attach(veteran)
+Surv(time, status)
+```
+
+Funkcija 'survfit' procjenjuje funkciju dozivljenja Kaplan - Meier metodom.
+
+```{r Funkcija dozivljenja}
+km_fit <- survfit(Surv(time, status) ~ 1, data=veteran) #1 s desne strane indicira da zasad ne uvodimo kovarijate
+summary(km_fit, times = c(1,30,60,90*(1:10)))
+
+```
+
+Uočite da 'summary' daje tablicu kao u primjeru 1, ali izlistali smo samo neka vremena događaja (opcija 'times = ...')
+
+Skraćeni sažetak:
+
+```{r}
+km_fit <- survfit(Surv(time, status) ~ 1, data=veteran)
+summary(km_fit)$table
+
+```
+
+Grafički prikaz:
+
+```{r Graficki prikaz}
+plot(survfit(Surv(time, status) ~ 1, data = veteran), 
+     xlab = "Dani", 
+     ylab = "Vjerojatnost dozivljenja", main = "Kaplan - Meier procjena")
+
+autoplot(km_fit, main = "Kaplan - Meier procjena funkcije dozivljenja")
+
+```
+
+Funkcija 'autoplot' iz paketa ggfortify daje prikaz zajedno sa intervalom pouzdanosti (default je 95%).
+
+Sada ćemo podijeliti subjekte prema tretmanu kojeg su dobili i procijeniti nove krivulje:
+
+```{r}
+km_trt_fit <- survfit(Surv(time, status) ~ trt, data=veteran)
+summary(km_trt_fit)$table
+autoplot(km_trt_fit)
+
+```
+
+Što možete uočiti?
+
+Provodimo log-rank test razlike među grupama: 
+
+```{r}
+surv_diff <- survdiff(Surv(time, status) ~ trt, data = veteran)
+surv_diff
+
+```
+
+# Coxova regresija
+
+Procjenjujemo parametre regresije sa svim kovarijatama:
+
+```{r}
+cox  <- coxph(Surv(time, status) ~ trt + celltype + karno + diagtime + age + prior , data = veteran)
+summary(cox)
+```
+
+Uočite da se za varijablu "celltype" stvorilo više dummy varijabli - zašto? Kako interpretiramo dobivene vrijednosti parametara uz te varijable?
+
+Da bismo nacrtali funkciju doživljenja procijenjenu ovom metodom, koristimo opet "survfit" funkciju koja kao argument moće primiti i formulu (npr. K-M) i procijenjeni model (npr. CR). Uočimo da "surfit" procjenjuje i bazični hazard (inače ne bismo mogli dobiti krivulju):
+
+```{r}
+cox_fit <- survfit(cox)
+autoplot(cox_fit)
+```
+
+### Stratificirani podaci
+
+Možemo stratificirati podatke koristeći naredbu "strata" iz paketa. Stratificiramo po tipu tumora:
+
+```{r}
+cox_cell  <- coxph(Surv(time, status) ~ trt  + karno + diagtime + age + prior+ strata(celltype) , data = veteran)
+summary(cox_cell)
+```
+
+Uočite da više ne možemo vidjeti efekt tipa tumora. Grafički prikaz:
+
+```{r}
+cox_cell_fit <- survfit(cox_cell)
+autoplot(cox_cell_fit, conf.int = FALSE) #ne crtamo intervale zbog preglednosti
+```
