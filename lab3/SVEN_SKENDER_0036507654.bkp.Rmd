@@ -3,9 +3,9 @@ title: "3. laboratorijska vježba"
 subtitle: "Multivarijatna analiza podataka"
 date: "ak. god. 2021/2022"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -354,7 +354,7 @@ Ponovite jednu metodu **metričkog skaliranja** po izboru (klasično ili *Sammon
 ```{r}
 # Vaš kod ovdje
 
-mds <- cmdscale(distance_difference, k=2, eig=TRUE)
+mds <- cmdscale(d_diff, k=2, eig=TRUE)
 x <- mds$points[, 1]
 y <- mds$points[, 2]
 
@@ -362,7 +362,7 @@ y <- -y
 
 plot(x, y, xlab="Coordinate 1", ylab="Coordinate 2",
      main="classical difference", type="n")
-text(x, y, labels = row.names(kont_tablica_3), cex=0.7)
+text(x, y, labels = row.names(C_32), cex=0.7)
 ```
 
 # 4. Analiza korespondencije
