@@ -51,45 +51,147 @@ Učitajte datoteku `classical.tsv` i proučite podatke.
 
 ```{r}
 # Vaš kod ovdje
+data <- read.csv("classical.tsv", sep = "\t")
+
+summary(data)
+```
+
+```{r}
+# Vaš kod ovdje
+
+data$composer <- factor(data$composer)
+data$category <- factor(data$category)
+```
+
+```{r}
+# Vaš kod ovdje
+
+summary(data)
 ```
 
 Proučite koliki je **ukupan broj skladbi po pojedinom skladatelju**, te koliki je **ukupan broj skladbi po pojedinoj kategoriji**. **Ispišite** ih poredano silazno po broju skladbi.
 
 ```{r}
 # Vaš kod ovdje
+
+
+# ukupan broj skladbi po pojedinom skladatelju
+
+data %>% 
+  group_by(composer) %>% 
+  summarize(ncompositions_composer = n())%>%
+  arrange(desc(ncompositions_composer))
+
+
+
+
+# ukupan broj skladbi po pojedinoj kategoriji
+
+
+data %>% 
+  group_by(category) %>% 
+  summarize(ncompositions_category = n())%>%
+  arrange(desc(ncompositions_category))
+
 ```
 
 **Ispišite** imena prvih deset skladatelja čije skladbe imaju **najveći ukupan broj glasova**, te prvih deset skladatelja čije skladbe imaju **najveći prosječan broj glasova**.
 
 ```{r}
 # Vaš kod ovdje
+
+top <- 10
+
+
+# najveći ukupan broj glasova
+
+data %>% 
+  group_by(composer) %>% 
+  summarise(nvotes = sum(stars)) %>% 
+  arrange(desc(nvotes)) %>%
+  top_n(top)
+
+
+
+
+# najveći prosječan broj glasova
+
+data %>% 
+  group_by(composer) %>% 
+  summarise(nvotes = sum(stars)) %>% 
+  mutate(avgvotes = round((nvotes/sum(nvotes)*100))) %>%
+  arrange(desc(avgvotes)) %>%
+  top_n(top)
+
+
 ```
 
 Iz podataka **uklonite** sve skladbe čiji skladatelji se pojavljuju vrlo rijetko (npr. manje od 5--10 puta). Zatim, uklonite sve skladbe čija kategorija se pojavljuje vrlo rijetko (npr. manje od 5--10 puta).
 
 ```{r}
 # Vaš kod ovdje
+
+threshold = 7
+
+
+
+
+# uklonite sve skladbe čiji skladatelji se pojavljuju vrlo rijetko 
+
+# extract threshold
+composers <-
+
+data %>% 
+  group_by(composer) %>% 
+  summarise(ntotal = n()) %>% 
+  filter(ntotal <= threshold)
+
+
+
+# uklonite sve skladbe čija kategorija se pojavljuje vrlo rijetko
+
+# extract threshold
+categories <-
+
+data %>% 
+  group_by(category) %>% 
+  summarise(ntotal = n()) %>% 
+  filter(ntotal <= threshold)
+
+
+
+
+
+# ukloni sve sto nije u extract
+clean_data <-
+
+data %>% 
+  filter(!(composer %in% composers$composer)) %>%
+  filter(!(category %in% categories$category))
+
+
+
+
+# rezultati
+
+View(clean_data)
 ```
 
-U ostatku vježbe koristite ovaj filtrirani podskup podataka.
-Obratite pozornost i na nedostajuće vrijednosti (ako ih ima). Razmislite na koji način ćete ih tretirati u ostatku vježbe.
+U ostatku vježbe koristite ovaj filtrirani podskup podataka. Obratite pozornost i na nedostajuće vrijednosti (ako ih ima). Razmislite na koji način ćete ih tretirati u ostatku vježbe.
 
 # 3. Višedimenzionalno skaliranje
 
 ## 3.1. Metričko skaliranje
 
-**Izračunajte i prikažite** kontingencijsku tablicu za varijable `composer` i `category`.
-Budući da će kontingencijska tablica biti jako velika, prikažite samo njezin dio koji sadrži nekolicinu najčešćih skladatelja i kategorija.
+**Izračunajte i prikažite** kontingencijsku tablicu za varijable `composer` i `category`. Budući da će kontingencijska tablica biti jako velika, prikažite samo njezin dio koji sadrži nekolicinu najčešćih skladatelja i kategorija.
 
 ```{r}
 # Vaš kod ovdje
 ```
 
-**Izračunajte** udaljenosti među kategorijama koristeći *totalnu varijacijsku udaljenost*. Neka je $C$ kontingencijska matrica dimenzija $N \times M$, te neka su skladatelji raspoređeni po retcima, a kategorije po stupcima. Udaljenost između dvije kategorije $i$ i $j$ računa se kao
-$$
+**Izračunajte** udaljenosti među kategorijama koristeći *totalnu varijacijsku udaljenost*. Neka je $C$ kontingencijska matrica dimenzija $N \times M$, te neka su skladatelji raspoređeni po retcima, a kategorije po stupcima. Udaljenost između dvije kategorije $i$ i $j$ računa se kao $$
 \delta_{i,j} = \frac{1}{2} \sum_{k=1}^N \left\lvert \frac{C_{k,i}}{S_i} - \frac{C_{k,j}}{S_j} \right\rvert,
-$$
-gdje je $S_i = \sum_{k=1}^N C_{k,i}$. **Izračunajte i vizualizirajte matricu udaljenosti kategorija.** Koji parovi kategorija su najsličniji, a koji najrazličitiji?
+$$ gdje je $S_i = \sum_{k=1}^N C_{k,i}$. **Izračunajte i vizualizirajte matricu udaljenosti kategorija.** Koji parovi kategorija su najsličniji, a koji najrazličitiji?
 
 ```{r}
 # Vaš kod ovdje
@@ -175,7 +277,7 @@ U nastavku vježbe koristite ovako generirani podskup podataka.
 # Vaš kod ovdje
 ```
 
-Kreirajte novi podskup podataka tako da sadrži **5--10 skladatelja po Vašem izboru**. Zatim ponovno **odredite** koje kategorije skladbi se najčešće pojavljuju u dobivenom podskupu, te zadržite samo skladbe koje pripadaju **prvih 5--10 kategorija**.  **Izračunajte i prikažite** kontingencijsku matricu. **Prikažite** graf analize korespondencije. Pokušajte ponovo odgovoriti na gornja pitanja. Kakve nove zaključke možete izvesti?
+Kreirajte novi podskup podataka tako da sadrži **5--10 skladatelja po Vašem izboru**. Zatim ponovno **odredite** koje kategorije skladbi se najčešće pojavljuju u dobivenom podskupu, te zadržite samo skladbe koje pripadaju **prvih 5--10 kategorija**. **Izračunajte i prikažite** kontingencijsku matricu. **Prikažite** graf analize korespondencije. Pokušajte ponovo odgovoriti na gornja pitanja. Kakve nove zaključke možete izvesti?
 
 ```{r}
 # Vaš kod ovdje
