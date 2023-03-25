@@ -1,7 +1,9 @@
 # Multivariate Data Analysis
+
 Multivariate Data Analysis FER labs
 
 Learning Outcomes:
+
 - Define main notions in the multivariate data analysis
 - Explain mathematical backgrounds of main multivariate statistical procedures
 - Apply linear multiple regression analysis
